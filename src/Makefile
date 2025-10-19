@@ -6,8 +6,21 @@ SRCDIR = src
 OBJDIR = obj
 BINDIR = bin
 
+# Optional CBOR support
+WITH_CBOR ?= 1
+ifeq ($(WITH_CBOR),1)
+    CFLAGS += -DWITH_CBOR
+    CBOR_LIBS = $(shell pkg-config --libs libcbor 2>/dev/null || echo "-lcbor")
+    CBOR_CFLAGS = $(shell pkg-config --cflags libcbor 2>/dev/null)
+    CFLAGS += $(CBOR_CFLAGS)
+    LIBS += $(CBOR_LIBS)
+    CBOR_SOURCES = $(SRCDIR)/merkle_tree_cbor.c
+else
+    CBOR_SOURCES =
+endif
+
 # Source files
-SOURCES = $(SRCDIR)/merkle_tree.c $(SRCDIR)/test_merkle_tree.c
+SOURCES = $(SRCDIR)/merkle_tree.c $(SRCDIR)/test_merkle_tree.c $(CBOR_SOURCES)
 OBJECTS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 TARGET = $(BINDIR)/test_merkle_tree
 
@@ -19,7 +32,7 @@ all: $(TARGET)
 
 # Link the executable
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@
+	$(CC) $(OBJECTS) $(LIBS) -o $@
 
 # Compile source files
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
@@ -43,10 +56,14 @@ install-headers:
 	cp $(SRCDIR)/merkle_tree.h /usr/local/include/merkle_tree/
 
 # Create static library
-lib: $(OBJDIR)/merkle_tree.o
-	ar rcs $(BINDIR)/libmerkletree.a $(OBJDIR)/merkle_tree.o
+lib: $(OBJDIR)/merkle_tree.o $(if $(WITH_CBOR),$(OBJDIR)/merkle_tree_cbor.o)
+	ar rcs $(BINDIR)/libmerkletree.a $^
 
-.PHONY: all clean test debug install-headers lib
+# Build without CBOR
+no-cbor:
+	$(MAKE) WITH_CBOR=0
+
+.PHONY: all clean test debug install-headers lib no-cbor
 
 # Dependencies
 $(OBJDIR)/merkle_tree.o: $(SRCDIR)/merkle_tree.c $(SRCDIR)/merkle_tree.h

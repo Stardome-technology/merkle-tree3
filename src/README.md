@@ -24,10 +24,17 @@ This implementation is restricted to working with hash values only:
 - `merkle_tree.h` - Header file with all public APIs and structures
 - `merkle_tree.c` - Implementation of all merkle tree functionality
 - `test_merkle_tree.c` - Example usage and test cases with hash values
-- `merkle_tree_schema.json` - JSON schema for serializing hash-based trees
-- `Makefile` - Build configuration
+- `merkle_tree_cbor.h` - CBOR serialization header (optional)
+- `merkle_tree_cbor.c` - CBOR serialization implementation (optional)
+- `CBOR_INSTALL.md` - Instructions for installing libcbor dependency
+- `Makefile` - Build configuration with optional CBOR support
+- `CMakeLists.txt` - CMake build configuration with CBOR auto-detection
 
 ## Building
+
+### Quick Setup
+1. **Install libcbor** (optional): See [CBOR_INSTALL.md](CBOR_INSTALL.md)
+2. **Build**: Choose your preferred method below
 
 ### Windows Batch Script (Easy)
 ```cmd
@@ -37,24 +44,34 @@ build.bat
 
 ### Using Make (Linux/macOS/MinGW)
 ```bash
-# Build and run tests
+# Build with CBOR support (default if libcbor found)
 make test
 
-# Build only
-make all
+# Build without CBOR
+make WITH_CBOR=0
 
 # Build static library
 make lib
 
 # Clean build artifacts
 make clean
-
-# Debug build
-make debug
 ```
 
 ### Using CMake (Cross-platform)
 ```bash
+mkdir build && cd build
+
+# Auto-detect CBOR support
+cmake ..
+
+# Force enable CBOR
+cmake .. -DWITH_CBOR=ON
+
+# Disable CBOR
+cmake .. -DWITH_CBOR=OFF
+
+make
+```
 # Create build directory
 mkdir build && cd build
 
@@ -172,8 +189,9 @@ const hash_algo_t my_algo = {
 - **Proof Generation**: Build proofs for any subset of leaves
 - **Proof Verification**: Verify proofs against merkle roots
 - **Flexible Hash Algorithms**: Support for custom hash functions (SHA256 included by default)
-- **JSON Schema**: Structured data format for serialization and interoperability
+- **CBOR Serialization**: Binary serialization support with [libcbor](https://github.com/PJK/libcbor) (optional)
 - **Cross-platform**: Works on Windows, Linux, and macOS with multiple build systems
+- **Optional Dependencies**: Core functionality works without external libraries
 
 ## API Reference
 
@@ -206,6 +224,14 @@ const hash_algo_t my_algo = {
 - `hash_to_hex()` - Convert hash to hex string
 - `hex_to_hash()` - Convert hex string to hash
 
+#### CBOR Serialization (Optional)
+When compiled with `-DWITH_CBOR`:
+- `merkle_tree_to_cbor_buffer()` - Serialize tree to binary buffer
+- `merkle_tree_from_cbor_buffer()` - Deserialize tree from buffer
+- `merkle_proof_to_cbor_buffer()` - Serialize proof to binary buffer
+- `merkle_proof_from_cbor_buffer()` - Deserialize proof from buffer
+- `cbor_buffer_free()` - Free serialization buffers
+
 ### Hash Algorithms
 
 The library includes SHA256 by default:
@@ -220,6 +246,15 @@ The library manages memory carefully:
 - All `*_free()` functions must be called to prevent leaks
 - `merkle_result_t` may contain allocated data that needs freeing
 - Retrieved leaves from `cbmt_retrieve_leaves()` must be freed
+- CBOR buffers from `*_to_cbor_buffer()` must be freed with `cbor_buffer_free()`
+
+## CBOR Serialization Benefits
+
+When libcbor is available, you get:
+- **Binary Efficiency**: Hashes stored as raw bytes (~50% smaller than hex)
+- **Type Safety**: Native support for binary data and integers
+- **Standards Compliance**: RFC 7049 CBOR specification
+- **Faster Parsing**: Binary format is faster than text-based formats
 
 ## Compatibility
 
@@ -227,7 +262,7 @@ This C implementation focuses on cryptographic hash values:
 - Fixed 32-byte hash size for security and consistency
 - SHA256 hash algorithm for robust cryptographic properties
 - CBMT algorithm for efficient tree construction
-- JSON schema support for data exchange
+- Optional CBOR serialization for efficient data exchange
 
 ## Testing
 

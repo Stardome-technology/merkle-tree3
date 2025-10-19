@@ -1,4 +1,7 @@
 #include "merkle_tree.h"
+#ifdef WITH_CBOR
+#include "merkle_tree_cbor.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -198,6 +201,76 @@ void test_hash_utilities() {
     printf("Hash utilities test passed!\n");
 }
 
+#ifdef WITH_CBOR
+// Test CBOR serialization/deserialization
+void test_cbor_serialization() {
+    printf("\n--- Testing CBOR Serialization ---\n");
+    
+    // Create test data
+    int32_t test_values[] = {100, 200, 300};
+    size_t leaves_count = 3;
+    
+    hash_t* leaves = malloc(leaves_count * sizeof(hash_t));
+    assert(leaves != NULL);
+    
+    for (size_t i = 0; i < leaves_count; i++) {
+        int_to_hash(test_values[i], leaves[i]);
+    }
+    
+    // Build tree
+    merkle_tree_t* original_tree = cbmt_build_merkle_tree(leaves, leaves_count, &sha256_algo);
+    assert(original_tree != NULL);
+    
+    // Test tree serialization
+    cbor_buffer_t tree_buffer = merkle_tree_to_cbor_buffer(original_tree);
+    assert(tree_buffer.success);
+    printf("Serialized tree to %zu bytes\n", tree_buffer.size);
+    
+    // Test tree deserialization
+    merkle_tree_t* restored_tree = merkle_tree_from_cbor_buffer(tree_buffer.data, tree_buffer.size);
+    assert(restored_tree != NULL);
+    
+    // Compare trees
+    assert(restored_tree->nodes_count == original_tree->nodes_count);
+    
+    hash_t orig_root, restored_root;
+    merkle_tree_root(original_tree, orig_root);
+    merkle_tree_root(restored_tree, restored_root);
+    assert(hash_equal(orig_root, restored_root));
+    
+    printf("Tree CBOR serialization test passed!\n");
+    
+    // Test proof serialization
+    uint32_t proof_indices[] = {0, 2};
+    merkle_result_t proof_result = merkle_tree_build_proof(original_tree, proof_indices, 2);
+    assert(proof_result.success);
+    
+    cbor_buffer_t proof_buffer = merkle_proof_to_cbor_buffer(proof_result.proof);
+    assert(proof_buffer.success);
+    printf("Serialized proof to %zu bytes\n", proof_buffer.size);
+    
+    // Test proof deserialization
+    merkle_proof_t* restored_proof = merkle_proof_from_cbor_buffer(proof_buffer.data, proof_buffer.size);
+    assert(restored_proof != NULL);
+    
+    // Verify restored proof works
+    hash_t proof_leaves[] = {leaves[0], leaves[2]};
+    bool verified = merkle_proof_verify(restored_proof, orig_root, proof_leaves, 2);
+    assert(verified);
+    
+    printf("Proof CBOR serialization test passed!\n");
+    
+    // Cleanup
+    merkle_tree_free(original_tree);
+    merkle_tree_free(restored_tree);
+    merkle_proof_free(proof_result.proof);
+    merkle_proof_free(restored_proof);
+    cbor_buffer_free(&tree_buffer);
+    cbor_buffer_free(&proof_buffer);
+    free(leaves);
+}
+#endif // WITH_CBOR
+
 int main() {
     printf("=== Hash-based Merkle Tree C Implementation Tests ===\n");
     
@@ -205,6 +278,12 @@ int main() {
     test_single_leaf();
     test_merkle_tree();
     test_hash_utilities();
+    
+#ifdef WITH_CBOR
+    test_cbor_serialization();
+#else
+    printf("\nCBOR support disabled - skipping CBOR tests\n");
+#endif
     
     printf("\n=== All tests completed successfully! ===\n");
     return 0;
