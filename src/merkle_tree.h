@@ -5,45 +5,41 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Hash size constants
+#define HASH_SIZE 32        // SHA256 hash size in bytes
+#define HASH_HEX_SIZE 65    // Hex string size (64 chars + null terminator)
+
+// Hash type definition
+typedef uint8_t hash_t[HASH_SIZE];
+
 // Forward declarations
 typedef struct merkle_tree merkle_tree_t;
 typedef struct merkle_proof merkle_proof_t;
 
-// Function pointer type for merge operations
-typedef void (*merge_fn_t)(const void* left, const void* right, void* result);
+// Function pointer type for hash operations
+typedef void (*hash_fn_t)(const uint8_t* left, const uint8_t* right, uint8_t* result);
 
-// Function pointer type for comparison operations
-typedef int (*compare_fn_t)(const void* a, const void* b);
-
-// Function pointer type for copy operations
-typedef void (*copy_fn_t)(const void* src, void* dst);
-
-// Function pointer type for default value initialization
-typedef void (*default_fn_t)(void* item);
-
-// Structure to hold type-specific operations
+// Hash algorithm information
 typedef struct {
-    merge_fn_t merge;
-    compare_fn_t compare;
-    copy_fn_t copy;
-    default_fn_t default_init;
-    size_t item_size;
-} type_ops_t;
+    hash_fn_t hash_func;    // Hash function pointer
+    char* algo_name;        // Algorithm name (e.g., "sha256", "blake2b")
+    size_t hash_size;       // Hash size in bytes (should be HASH_SIZE)
+} hash_algo_t;
 
 // Merkle Tree structure
 struct merkle_tree {
-    void* nodes;           // Array of nodes
-    size_t nodes_count;    // Number of nodes
-    type_ops_t ops;        // Type operations
+    hash_t* nodes;          // Array of hash nodes
+    size_t nodes_count;     // Number of nodes
+    hash_algo_t algo;       // Hash algorithm information
 };
 
 // Merkle Proof structure
 struct merkle_proof {
-    uint32_t* indices;     // Array of indices
-    size_t indices_count;  // Number of indices
-    void* lemmas;          // Array of lemmas
-    size_t lemmas_count;   // Number of lemmas
-    type_ops_t ops;        // Type operations
+    uint32_t* indices;      // Array of indices
+    size_t indices_count;   // Number of indices
+    hash_t* lemmas;         // Array of hash lemmas
+    size_t lemmas_count;    // Number of lemmas
+    hash_algo_t algo;       // Hash algorithm information
 };
 
 // Result structure for operations that may fail
@@ -62,40 +58,42 @@ uint32_t tree_index_parent(uint32_t index);
 bool tree_index_is_left(uint32_t index);
 
 // Merkle Tree operations
-merkle_tree_t* merkle_tree_new(const type_ops_t* ops);
+merkle_tree_t* merkle_tree_new(const hash_algo_t* algo);
 void merkle_tree_free(merkle_tree_t* tree);
 merkle_result_t merkle_tree_build_proof(const merkle_tree_t* tree, const uint32_t* leaf_indices, size_t indices_count);
-void merkle_tree_root(const merkle_tree_t* tree, void* result);
-const void* merkle_tree_nodes(const merkle_tree_t* tree);
+void merkle_tree_root(const merkle_tree_t* tree, hash_t result);
+const hash_t* merkle_tree_nodes(const merkle_tree_t* tree);
 size_t merkle_tree_nodes_count(const merkle_tree_t* tree);
 
 // Merkle Proof operations
 merkle_proof_t* merkle_proof_new(const uint32_t* indices, size_t indices_count, 
-                                 const void* lemmas, size_t lemmas_count, const type_ops_t* ops);
+                                 const hash_t* lemmas, size_t lemmas_count, const hash_algo_t* algo);
 void merkle_proof_free(merkle_proof_t* proof);
-bool merkle_proof_root(const merkle_proof_t* proof, const void* leaves, size_t leaves_count, void* result);
-bool merkle_proof_verify(const merkle_proof_t* proof, const void* root, const void* leaves, size_t leaves_count);
+bool merkle_proof_root(const merkle_proof_t* proof, const hash_t* leaves, size_t leaves_count, hash_t result);
+bool merkle_proof_verify(const merkle_proof_t* proof, const hash_t root, const hash_t* leaves, size_t leaves_count);
 const uint32_t* merkle_proof_indices(const merkle_proof_t* proof);
 size_t merkle_proof_indices_count(const merkle_proof_t* proof);
-const void* merkle_proof_lemmas(const merkle_proof_t* proof);
+const hash_t* merkle_proof_lemmas(const merkle_proof_t* proof);
 size_t merkle_proof_lemmas_count(const merkle_proof_t* proof);
 
 // CBMT operations
-void cbmt_build_merkle_root(const void* leaves, size_t leaves_count, const type_ops_t* ops, void* result);
-merkle_tree_t* cbmt_build_merkle_tree(const void* leaves, size_t leaves_count, const type_ops_t* ops);
-merkle_result_t cbmt_build_merkle_proof(const void* leaves, size_t leaves_count, 
+void cbmt_build_merkle_root(const hash_t* leaves, size_t leaves_count, const hash_algo_t* algo, hash_t result);
+merkle_tree_t* cbmt_build_merkle_tree(const hash_t* leaves, size_t leaves_count, const hash_algo_t* algo);
+merkle_result_t cbmt_build_merkle_proof(const hash_t* leaves, size_t leaves_count, 
                                         const uint32_t* leaf_indices, size_t indices_count, 
-                                        const type_ops_t* ops);
-merkle_result_t cbmt_retrieve_leaves(const void* leaves, size_t leaves_count, 
+                                        const hash_algo_t* algo);
+merkle_result_t cbmt_retrieve_leaves(const hash_t* leaves, size_t leaves_count, 
                                      const merkle_proof_t* proof, size_t* result_count);
 
-// Utility functions for common types
-void merge_int32(const void* left, const void* right, void* result);
-int compare_int32(const void* a, const void* b);
-void copy_int32(const void* src, void* dst);
-void default_int32(void* item);
+// Hash utility functions
+void hash_copy(const hash_t src, hash_t dst);
+int hash_compare(const hash_t a, const hash_t b);
+void hash_zero(hash_t hash);
+void hash_to_hex(const hash_t hash, char* hex_str);
+bool hash_from_hex(const char* hex_str, hash_t hash);
 
-// Type operations for int32_t
-extern const type_ops_t int32_ops;
+// Built-in hash algorithms
+extern const hash_algo_t sha256_algo;
+void sha256_hash(const uint8_t* left, const uint8_t* right, uint8_t* result);
 
 #endif // MERKLE_TREE_H
