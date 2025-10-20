@@ -1,0 +1,83 @@
+; CDDL schema for Stardome Merkle Tree CBOR serialization
+; Hashes are stored as RAW BYTES (not hex-encoded)
+; Both structures use keys 1-5 but are separate CBOR objects
+
+; Merkle Tree CBOR structure
+merkle-tree-cbor = {
+  1: uint,                      ; version (CBOR_KEY_VERSION)
+  2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
+  3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
+  4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
+  5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
+}
+
+; Merkle Proof CBOR structure
+merkle-proof-cbor = {
+  1: uint,                      ; version (CBOR_KEY_VERSION)
+  2: [* uint],                  ; indices array (CBOR_KEY_INDICES)
+  3: [* bstr .size 32],         ; lemmas - array of raw 32-byte hashes (CBOR_KEY_LEMMAS)
+  4: uint,                      ; indices_count (CBOR_KEY_INDICES_COUNT)
+  5: uint,                      ; lemmas_count (CBOR_KEY_LEMMAS_COUNT)
+}
+
+; Hash algorithms supported
+hash-algorithm = "sha256" / "blake2b" / "keccak256" / tstr
+
+; Extended tree with optional fields
+merkle-tree-extended = {
+  1: uint .default 1,           ; version
+  2: [* bstr .size 32],         ; nodes (raw bytes)
+  3: uint .ge 15,               ; nodes_count
+  4: hash-algorithm,            ; hashalgo
+  5: uint .ge 1,                ; hash_size
+  ? 6: uint .ge 8,              ; leaves_count (optional)
+  ? 7: uint,                    ; tree_depth (optional)
+  ? 8: bstr .size 32,           ; root_hash (optional, raw bytes)
+  ? 9: metadata-map             ; metadata (optional)
+}
+
+; Metadata structure
+metadata-map = {
+  ? 1: tstr,                    ; created_at (ISO 8601)
+  ? 2: tstr,                    ; algorithm_info
+  ? 3: tstr,                    ; original_data_type
+  * uint => any                 ; additional integer-keyed properties
+}
+
+; Serial protocol wrapper with encoding declaration
+serial-cbor-packet = {
+  1: encoding-type,             ; encoding declaration
+  2: merkle-tree-cbor / merkle-proof-cbor  ; payload
+}
+
+encoding-type = &(
+  raw: 0,                       ; Raw bytes (most efficient)
+  ascii: 1,                     ; ASCII encoding
+  utf8: 2                       ; UTF-8 encoding
+)
+
+; Example CBOR Diagnostic Notation:
+;
+; Merkle Tree:
+; {
+;   1: 1,                       / version /
+;   2: [                        / nodes (raw bytes) /
+;     h'a1b2c3d4e5f67890...',
+;     h'1234567890abcdef...'
+;   ],
+;   3: 15,                      / nodes_count /
+;   4: "sha256",                / hashalgo /
+;   5: 32                       / hash_size /
+; }
+;
+; Merkle Proof:
+; {
+;   1: 1,                       / version /
+;   2: [0, 3],                  / indices /
+;   3: [                        / lemmas (raw bytes) /
+;     h'abcdef1234567890...',
+;     h'fedcba0987654321...'
+;   ],
+;   4: 2,                       / indices_count /
+;   5: 2                        / lemmas_count /
+; }

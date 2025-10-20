@@ -43,16 +43,18 @@ hash_t* cbor_to_hash_array(cbor_item_t* item, size_t* count);
 #define CBOR_MERKLE_PROOF_VERSION 1
 
 // CBOR map keys (using integers for efficiency)
+// Note: Merkle tree and merkle proof use the same key numbers (1-5)
+// but as separate CBOR objects, there is no key collision
 enum cbor_merkle_keys {
     CBOR_KEY_VERSION = 1,
-    CBOR_KEY_NODES = 2,
-    CBOR_KEY_NODES_COUNT = 3,
-    CBOR_KEY_ALGORITHM = 4,
-    CBOR_KEY_HASH_SIZE = 5,
-    CBOR_KEY_INDICES = 6,
-    CBOR_KEY_LEMMAS = 7,
-    CBOR_KEY_INDICES_COUNT = 8,
-    CBOR_KEY_LEMMAS_COUNT = 9
+    CBOR_KEY_NODES = 2,           // Merkle tree: nodes array
+    CBOR_KEY_NODES_COUNT = 3,     // Merkle tree: nodes count
+    CBOR_KEY_ALGORITHM = 4,       // Merkle tree: algorithm name
+    CBOR_KEY_HASH_SIZE = 5,       // Merkle tree: hash size
+    CBOR_KEY_INDICES = 2,         // Merkle proof: indices array (renumbered from 6)
+    CBOR_KEY_LEMMAS = 3,          // Merkle proof: lemmas array (renumbered from 7)
+    CBOR_KEY_INDICES_COUNT = 4,   // Merkle proof: indices count (renumbered from 8)
+    CBOR_KEY_LEMMAS_COUNT = 5     // Merkle proof: lemmas count (renumbered from 9)
 };
 
 #endif // WITH_CBOR
