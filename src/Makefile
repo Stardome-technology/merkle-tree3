@@ -20,7 +20,7 @@ else
 endif
 
 # Source files
-SOURCES = $(SRCDIR)/merkle_tree.c $(SRCDIR)/test_merkle_tree.c $(CBOR_SOURCES)
+SOURCES = $(SRCDIR)/merkle_tree.c $(SRCDIR)/merkle_tree_secure.c $(SRCDIR)/test_merkle_tree.c $(CBOR_SOURCES)
 OBJECTS = $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 TARGET = $(BINDIR)/test_merkle_tree
 

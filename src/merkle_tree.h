@@ -9,6 +9,11 @@
 #define HASH_SIZE 32        // SHA256 hash size in bytes
 #define HASH_HEX_SIZE 65    // Hex string size (64 chars + null terminator)
 
+// Security constants for attack mitigation
+#define LEAF_PREFIX 0x00        // Prefix for leaf nodes
+#define INTERNAL_PREFIX 0x01    // Prefix for internal nodes
+#define MAX_TREE_DEPTH 32       // Maximum allowed tree depth
+
 // Hash type definition
 typedef uint8_t hash_t[HASH_SIZE];
 
@@ -26,12 +31,31 @@ typedef struct {
     size_t hash_size;       // Hash size in bytes (should be HASH_SIZE)
 } hash_algo_t;
 
+// Enhanced hash algorithm with security features
+typedef struct {
+    hash_fn_t hash_func;        // Base hash function pointer
+    char* algo_name;            // Algorithm name
+    size_t hash_size;           // Hash size in bytes
+    bool use_double_leaf_hash;  // Enable double hashing for leaves
+    bool use_depth_prefix;      // Enable depth prefixing
+    bool use_node_prefix;       // Enable leaf/internal prefixing
+} secure_hash_algo_t;
+
 // Merkle Tree structure
 struct merkle_tree {
     hash_t* nodes;          // Array of hash nodes
     size_t nodes_count;     // Number of nodes
-    hash_algo_t algo;       // Hash algorithm information
+    hash_algo_t* hash_algo;       // Hash algorithm information
 };
+
+// Enhanced Merkle Tree structure with security
+typedef struct {
+    hash_t* nodes;              // Array of hash nodes
+    size_t nodes_count;         // Number of nodes
+    uint8_t tree_depth;         // Tree depth for validation
+    secure_hash_algo_t* algo;   // Enhanced hash algorithm
+    bool security_enabled;      // Security features enabled
+} secure_merkle_tree_t;
 
 // Merkle Proof structure
 struct merkle_proof {
@@ -39,8 +63,18 @@ struct merkle_proof {
     size_t indices_count;   // Number of indices
     hash_t* lemmas;         // Array of hash lemmas
     size_t lemmas_count;    // Number of lemmas
-    hash_algo_t algo;       // Hash algorithm information
+    hash_algo_t* hash_algo;       // Hash algorithm information
 };
+
+// Enhanced Merkle Proof structure with security
+typedef struct {
+    uint32_t* indices;          // Array of indices
+    size_t indices_count;       // Number of indices
+    hash_t* lemmas;             // Array of hash lemmas
+    size_t lemmas_count;        // Number of lemmas
+    uint8_t expected_depth;     // Expected tree depth for validation
+    secure_hash_algo_t* algo;   // Enhanced hash algorithm
+} secure_merkle_proof_t;
 
 // Result structure for operations that may fail
 typedef struct {
@@ -48,6 +82,8 @@ typedef struct {
     union {
         merkle_tree_t* tree;
         merkle_proof_t* proof;
+        secure_merkle_tree_t* secure_tree;
+        secure_merkle_proof_t* secure_proof;
         void* data;
     };
 } merkle_result_t;
@@ -95,5 +131,31 @@ bool hash_from_hex(const char* hex_str, hash_t hash);
 // Built-in hash algorithms
 extern const hash_algo_t sha256_algo;
 void sha256_hash(const uint8_t* left, const uint8_t* right, uint8_t* result);
+
+// Security-enhanced hash functions
+void secure_leaf_hash(const uint8_t* data, size_t data_len, uint8_t depth, 
+                     const secure_hash_algo_t* algo, uint8_t* result);
+void secure_internal_hash(const uint8_t* left, const uint8_t* right, uint8_t depth,
+                         const secure_hash_algo_t* algo, uint8_t* result);
+
+// Secure Merkle Tree operations
+secure_merkle_tree_t* secure_merkle_tree_new(const secure_hash_algo_t* algo);
+void secure_merkle_tree_free(secure_merkle_tree_t* tree);
+merkle_result_t secure_cbmt_build_merkle_tree(const hash_t* leaves, size_t leaves_count, 
+                                             const secure_hash_algo_t* algo);
+merkle_result_t secure_merkle_tree_build_proof(const secure_merkle_tree_t* tree, 
+                                              const uint32_t* leaf_indices, size_t indices_count);
+
+// Secure Merkle Proof operations
+secure_merkle_proof_t* secure_merkle_proof_new(const uint32_t* indices, size_t indices_count,
+                                              const hash_t* lemmas, size_t lemmas_count,
+                                              uint8_t expected_depth, const secure_hash_algo_t* algo);
+void secure_merkle_proof_free(secure_merkle_proof_t* proof);
+bool secure_merkle_proof_verify(const secure_merkle_proof_t* proof, const hash_t root, 
+                               const hash_t* leaves, size_t leaves_count);
+
+// Built-in secure hash algorithms
+extern const secure_hash_algo_t secure_sha256_max;      // Maximum security
+extern const secure_hash_algo_t secure_sha256_moderate; // Moderate security
 
 #endif // MERKLE_TREE_H

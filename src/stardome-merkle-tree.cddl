@@ -11,6 +11,17 @@ merkle-tree-cbor = {
   5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
 }
 
+; Secure Merkle Tree CBOR structure (version 2+)
+secure-merkle-tree-cbor = {
+  1: 2,                         ; version (CBOR_KEY_VERSION) - version 2 for security
+  2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
+  3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
+  4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
+  5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
+  6: uint .le 32,               ; tree_depth (CBOR_KEY_TREE_DEPTH)
+  7: security-flags             ; security_flags (CBOR_KEY_SECURITY_FLAGS)
+}
+
 ; Merkle Proof CBOR structure
 merkle-proof-cbor = {
   1: uint,                      ; version (CBOR_KEY_VERSION)
@@ -18,6 +29,16 @@ merkle-proof-cbor = {
   3: [* bstr .size 32],         ; lemmas - array of raw 32-byte hashes (CBOR_KEY_LEMMAS)
   4: uint,                      ; indices_count (CBOR_KEY_INDICES_COUNT)
   5: uint,                      ; lemmas_count (CBOR_KEY_LEMMAS_COUNT)
+}
+
+; Secure Merkle Proof CBOR structure (version 2+)
+secure-merkle-proof-cbor = {
+  1: 2,                         ; version (CBOR_KEY_VERSION) - version 2 for security
+  2: [* uint],                  ; indices array (CBOR_KEY_INDICES)
+  3: [* bstr .size 32],         ; lemmas - array of raw 32-byte hashes (CBOR_KEY_LEMMAS)
+  4: uint,                      ; indices_count (CBOR_KEY_INDICES_COUNT)
+  5: uint,                      ; lemmas_count (CBOR_KEY_LEMMAS_COUNT)
+  8: uint .le 32,               ; expected_depth (CBOR_KEY_EXPECTED_DEPTH)
 }
 
 ; Hash algorithms supported
@@ -34,6 +55,13 @@ merkle-tree-extended = {
   ? 7: uint,                    ; tree_depth (optional)
   ? 8: bstr .size 32,           ; root_hash (optional, raw bytes)
   ? 9: metadata-map             ; metadata (optional)
+}
+
+; Security configuration flags
+security-flags = {
+  1: bool,                      ; use_double_leaf_hash
+  2: bool,                      ; use_depth_prefix  
+  3: bool                       ; use_node_prefix
 }
 
 ; Metadata structure
@@ -80,4 +108,35 @@ encoding-type = &(
 ;   ],
 ;   4: 2,                       / indices_count /
 ;   5: 2                        / lemmas_count /
+; }
+;
+; Secure Merkle Tree:
+; {
+;   1: 2,                       / version (security enabled) /
+;   2: [                        / nodes (raw bytes with security prefixes) /
+;     h'a1b2c3d4e5f67890...',
+;     h'1234567890abcdef...'
+;   ],
+;   3: 15,                      / nodes_count /
+;   4: "sha256-secure-moderate", / hashalgo /
+;   5: 32,                      / hash_size /
+;   6: 4,                       / tree_depth /
+;   7: {                        / security_flags /
+;     1: false,                 / use_double_leaf_hash /
+;     2: true,                  / use_depth_prefix /
+;     3: true                   / use_node_prefix /
+;   }
+; }
+;
+; Secure Merkle Proof:
+; {
+;   1: 2,                       / version (security enabled) /
+;   2: [0],                     / indices /
+;   3: [                        / lemmas (raw bytes with security) /
+;     h'abcdef1234567890...',
+;     h'fedcba0987654321...'
+;   ],
+;   4: 1,                       / indices_count /
+;   5: 2,                       / lemmas_count /
+;   8: 4                        / expected_depth /
 ; }

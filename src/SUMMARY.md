@@ -1,16 +1,22 @@
 # Merkle Tree C Implementation - File Summary
 
-This directory contains a complete C implementation of the Rust merkle-tree3 library.
+This directory contains a complete C implementation of the Rust merkle-tree3 library with security enhancements and CBOR serialization support.
 
 ## Created Files
 
 ### Core Implementation
 - **`merkle_tree.h`** - Header file with all public APIs, structures, and function declarations
-- **`merkle_tree.c`** - Complete implementation of all merkle tree functionality
+- **`merkle_tree.c`** - Complete implementation of all merkle tree functionality  
+- **`merkle_tree_secure.c`** - Security-enhanced implementation with attack mitigation
 - **`test_merkle_tree.c`** - Comprehensive test suite and usage examples
 
+### CBOR Serialization
+- **`merkle_tree_cbor.h`** - CBOR serialization API declarations
+- **`merkle_tree_cbor.c`** - CBOR serialization implementation using libcbor
+- **`stardome-merkle-tree.cddl`** - CBOR schema documentation in CDDL format
+
 ### Build System Files
-- **`Makefile`** - GNU Make build configuration for Linux/macOS/MinGW
+- **`Makefile`** - GNU Make build configuration for Linux/macOS/MinGW with CBOR support
 - **`CMakeLists.txt`** - CMake build configuration for cross-platform builds
 - **`Config.cmake.in`** - CMake package configuration template
 - **`build.bat`** - Windows batch script that auto-detects available compilers
