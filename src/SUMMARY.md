@@ -85,14 +85,18 @@ This directory contains a complete C implementation of the Rust merkle-tree3 lib
 1: version, 2: nodes[], 3: nodes_count, 4: algorithm, 5: hash_size
 ```
 
-### Merkle Proof (Keys 1-5)  
+### Merkle Proof (Keys 1-5, unified structure)
 ```
+Version 1 (Legacy - no security):
 1: version, 2: indices[], 3: lemmas[], 4: indices_count, 5: lemmas_count
+
+Version 2 (Secure - with optional depth validation):
+1: version, 2: indices[], 3: lemmas[], 4: indices_count, 5: lemmas_count, ? 8: expected_depth
 ```
 
-### Secure Extensions (Keys 6-8)
+### Secure Merkle Tree (Keys 1-7)
 ```
-6: tree_depth, 7: security_flags, 8: metadata (optional)
+1: version, 2: nodes[], 3: nodes_count, 4: algorithm, 5: hash_size, 6: tree_depth, 7: security_flags
 ```
 
 ## Build Options

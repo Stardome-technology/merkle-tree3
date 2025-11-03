@@ -224,7 +224,7 @@ merkle_tree_t* merkle_tree_new(const hash_algo_t* algo) {
     
     tree->nodes = NULL;
     tree->nodes_count = 0;
-    tree->algo = *algo;
+    tree->hash_algo = (hash_algo_t*)algo;  // Store pointer, not copy
     return tree;
 }
 
@@ -308,7 +308,7 @@ merkle_result_t merkle_tree_build_proof(const merkle_tree_t* tree, const uint32_
     
     // Create proof
     merkle_proof_t* proof = merkle_proof_new(indices, indices_count, 
-                                             lemmas->data, lemmas->count, &tree->algo);
+                                             lemmas->data, lemmas->count, tree->hash_algo);
     
     free(indices);
     uint32_queue_free(queue);
@@ -365,7 +365,7 @@ merkle_proof_t* merkle_proof_new(const uint32_t* indices, size_t indices_count,
     
     proof->indices_count = indices_count;
     proof->lemmas_count = lemmas_count;
-    proof->algo = *algo;
+    proof->hash_algo = (hash_algo_t*)algo;  // Store pointer, not copy
     
     return proof;
 }

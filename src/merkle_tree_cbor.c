@@ -222,9 +222,9 @@ cbor_item_t* merkle_proof_to_cbor(const merkle_proof_t* proof) {
     cbor_item_t* map = cbor_new_definite_map(4);
     if (!map) return NULL;
     
-    // Version
+    // Version (legacy version 1 for standard proofs)
     cbor_item_t* version_key = cbor_build_uint8(CBOR_KEY_VERSION);
-    cbor_item_t* version_val = cbor_build_uint8(CBOR_MERKLE_PROOF_VERSION);
+    cbor_item_t* version_val = cbor_build_uint8(CBOR_MERKLE_PROOF_VERSION_LEGACY);
     if (!cbor_map_add(map, (struct cbor_pair) {
         .key = version_key, .value = version_val
     })) {
@@ -435,6 +435,188 @@ void cbor_buffer_free(cbor_buffer_t* buffer) {
         buffer->size = 0;
         buffer->success = false;
     }
+}
+
+// Serialize secure merkle proof to CBOR (unified structure with optional expected_depth)
+cbor_item_t* secure_merkle_proof_to_cbor(const secure_merkle_proof_t* proof) {
+    if (!proof) return NULL;
+    
+    // Map size is 5 or 6 depending on whether expected_depth is included
+    cbor_item_t* map = cbor_new_definite_map(6);
+    if (!map) return NULL;
+    
+    // Version (secure version 2)
+    cbor_item_t* version_key = cbor_build_uint8(CBOR_KEY_VERSION);
+    cbor_item_t* version_val = cbor_build_uint8(CBOR_MERKLE_PROOF_VERSION_SECURE);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = version_key, .value = version_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Indices array
+    cbor_item_t* indices_key = cbor_build_uint8(CBOR_KEY_INDICES);
+    cbor_item_t* indices_array = cbor_new_definite_array(proof->indices_count);
+    if (!indices_array) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < proof->indices_count; i++) {
+        cbor_item_t* index_item = cbor_build_uint32(proof->indices[i]);
+        if (!cbor_array_push(indices_array, index_item)) {
+            cbor_decref(&indices_array);
+            cbor_decref(&map);
+            return NULL;
+        }
+        cbor_decref(&index_item);
+    }
+    
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = indices_key, .value = indices_array
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Lemmas array
+    cbor_item_t* lemmas_key = cbor_build_uint8(CBOR_KEY_LEMMAS);
+    cbor_item_t* lemmas_val = hash_array_to_cbor(proof->lemmas, proof->lemmas_count);
+    if (!lemmas_val || !cbor_map_add(map, (struct cbor_pair) {
+        .key = lemmas_key, .value = lemmas_val
+    })) {
+        cbor_decref(&map);
+        if (lemmas_val) cbor_decref(&lemmas_val);
+        return NULL;
+    }
+    
+    // Indices count
+    cbor_item_t* indices_count_key = cbor_build_uint8(CBOR_KEY_INDICES_COUNT);
+    cbor_item_t* indices_count_val = cbor_build_uint32(proof->indices_count);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = indices_count_key, .value = indices_count_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Lemmas count
+    cbor_item_t* lemmas_count_key = cbor_build_uint8(CBOR_KEY_LEMMAS_COUNT);
+    cbor_item_t* lemmas_count_val = cbor_build_uint32(proof->lemmas_count);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = lemmas_count_key, .value = lemmas_count_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Expected depth (optional, included for secure proofs)
+    cbor_item_t* expected_depth_key = cbor_build_uint8(CBOR_KEY_EXPECTED_DEPTH);
+    cbor_item_t* expected_depth_val = cbor_build_uint8(proof->expected_depth);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = expected_depth_key, .value = expected_depth_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    return map;
+}
+
+// Deserialize secure merkle proof from CBOR
+secure_merkle_proof_t* secure_merkle_proof_from_cbor(cbor_item_t* item) {
+    if (!cbor_isa_map(item)) {
+        return NULL;
+    }
+    
+    secure_merkle_proof_t* proof = malloc(sizeof(secure_merkle_proof_t));
+    if (!proof) return NULL;
+    
+    memset(proof, 0, sizeof(secure_merkle_proof_t));
+    
+    // Extract indices count
+    cbor_item_t* indices_count_key = cbor_build_uint8(CBOR_KEY_INDICES_COUNT);
+    cbor_item_t* indices_count_val = cbor_map_get(item, indices_count_key);
+    cbor_decref(&indices_count_key);
+    
+    if (!indices_count_val || !cbor_isa_uint(indices_count_val)) {
+        free(proof);
+        if (indices_count_val) cbor_decref(&indices_count_val);
+        return NULL;
+    }
+    
+    proof->indices_count = cbor_get_uint32(indices_count_val);
+    cbor_decref(&indices_count_val);
+    
+    // Extract indices array
+    cbor_item_t* indices_key = cbor_build_uint8(CBOR_KEY_INDICES);
+    cbor_item_t* indices_val = cbor_map_get(item, indices_key);
+    cbor_decref(&indices_key);
+    
+    if (!indices_val || !cbor_isa_array(indices_val)) {
+        free(proof);
+        if (indices_val) cbor_decref(&indices_val);
+        return NULL;
+    }
+    
+    proof->indices = malloc(proof->indices_count * sizeof(uint32_t));
+    if (!proof->indices) {
+        free(proof);
+        cbor_decref(&indices_val);
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < proof->indices_count; i++) {
+        cbor_item_t* index_item = cbor_array_get(indices_val, i);
+        if (!index_item || !cbor_isa_uint(index_item)) {
+            free(proof->indices);
+            free(proof);
+            cbor_decref(&indices_val);
+            if (index_item) cbor_decref(&index_item);
+            return NULL;
+        }
+        proof->indices[i] = cbor_get_uint32(index_item);
+        cbor_decref(&index_item);
+    }
+    cbor_decref(&indices_val);
+    
+    // Extract lemmas array
+    cbor_item_t* lemmas_key = cbor_build_uint8(CBOR_KEY_LEMMAS);
+    cbor_item_t* lemmas_val = cbor_map_get(item, lemmas_key);
+    cbor_decref(&lemmas_key);
+    
+    if (!lemmas_val) {
+        free(proof->indices);
+        free(proof);
+        return NULL;
+    }
+    
+    size_t lemmas_count;
+    proof->lemmas = cbor_to_hash_array(lemmas_val, &lemmas_count);
+    proof->lemmas_count = (uint32_t)lemmas_count;
+    cbor_decref(&lemmas_val);
+    
+    if (!proof->lemmas) {
+        free(proof->indices);
+        free(proof);
+        return NULL;
+    }
+    
+    // Extract expected depth (optional)
+    cbor_item_t* expected_depth_key = cbor_build_uint8(CBOR_KEY_EXPECTED_DEPTH);
+    cbor_item_t* expected_depth_val = cbor_map_get(item, expected_depth_key);
+    cbor_decref(&expected_depth_key);
+    
+    if (expected_depth_val && cbor_isa_uint(expected_depth_val)) {
+        proof->expected_depth = cbor_get_uint8(expected_depth_val);
+        cbor_decref(&expected_depth_val);
+    } else {
+        proof->expected_depth = 0;  // Default value if not present
+        if (expected_depth_val) cbor_decref(&expected_depth_val);
+    }
+    
+    return proof;
 }
 
 #endif // WITH_CBOR

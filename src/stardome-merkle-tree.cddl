@@ -22,23 +22,16 @@ secure-merkle-tree-cbor = {
   7: security-flags             ; security_flags (CBOR_KEY_SECURITY_FLAGS)
 }
 
-; Merkle Proof CBOR structure
+; Unified Merkle Proof CBOR structure (supports both legacy and secure proofs)
+; Version 1: Legacy proof without security features
+; Version 2: Secure proof with depth validation
 merkle-proof-cbor = {
-  1: uint,                      ; version (CBOR_KEY_VERSION)
+  1: uint,                      ; version (CBOR_KEY_VERSION) - 1 for legacy, 2 for secure
   2: [* uint],                  ; indices array (CBOR_KEY_INDICES)
   3: [* bstr .size 32],         ; lemmas - array of raw 32-byte hashes (CBOR_KEY_LEMMAS)
   4: uint,                      ; indices_count (CBOR_KEY_INDICES_COUNT)
   5: uint,                      ; lemmas_count (CBOR_KEY_LEMMAS_COUNT)
-}
-
-; Secure Merkle Proof CBOR structure (version 2+)
-secure-merkle-proof-cbor = {
-  1: 2,                         ; version (CBOR_KEY_VERSION) - version 2 for security
-  2: [* uint],                  ; indices array (CBOR_KEY_INDICES)
-  3: [* bstr .size 32],         ; lemmas - array of raw 32-byte hashes (CBOR_KEY_LEMMAS)
-  4: uint,                      ; indices_count (CBOR_KEY_INDICES_COUNT)
-  5: uint,                      ; lemmas_count (CBOR_KEY_LEMMAS_COUNT)
-  8: uint .le 32,               ; expected_depth (CBOR_KEY_EXPECTED_DEPTH)
+  ? 8: uint .le 32              ; expected_depth (CBOR_KEY_EXPECTED_DEPTH) - optional for security
 }
 
 ; Hash algorithms supported
@@ -98,9 +91,9 @@ encoding-type = &(
 ;   5: 32                       / hash_size /
 ; }
 ;
-; Merkle Proof:
+; Merkle Proof (Legacy - version 1):
 ; {
-;   1: 1,                       / version /
+;   1: 1,                       / version (legacy) /
 ;   2: [0, 3],                  / indices /
 ;   3: [                        / lemmas (raw bytes) /
 ;     h'abcdef1234567890...',
@@ -108,6 +101,19 @@ encoding-type = &(
 ;   ],
 ;   4: 2,                       / indices_count /
 ;   5: 2                        / lemmas_count /
+; }
+;
+; Merkle Proof (Secure - version 2 with optional expected_depth):
+; {
+;   1: 2,                       / version (secure) /
+;   2: [0],                     / indices /
+;   3: [                        / lemmas (raw bytes with security) /
+;     h'abcdef1234567890...',
+;     h'fedcba0987654321...'
+;   ],
+;   4: 1,                       / indices_count /
+;   5: 2,                       / lemmas_count /
+;   8: 4                        / expected_depth (optional) /
 ; }
 ;
 ; Secure Merkle Tree:
@@ -126,17 +132,4 @@ encoding-type = &(
 ;     2: true,                  / use_depth_prefix /
 ;     3: true                   / use_node_prefix /
 ;   }
-; }
-;
-; Secure Merkle Proof:
-; {
-;   1: 2,                       / version (security enabled) /
-;   2: [0],                     / indices /
-;   3: [                        / lemmas (raw bytes with security) /
-;     h'abcdef1234567890...',
-;     h'fedcba0987654321...'
-;   ],
-;   4: 1,                       / indices_count /
-;   5: 2,                       / lemmas_count /
-;   8: 4                        / expected_depth /
 ; }

@@ -72,9 +72,15 @@ typedef struct {
     size_t indices_count;       // Number of indices
     hash_t* lemmas;             // Array of hash lemmas
     size_t lemmas_count;        // Number of lemmas
-    uint8_t expected_depth;     // Expected tree depth for validation
+    uint8_t expected_depth;     // Expected tree depth for validation (0 = not used)
     secure_hash_algo_t* algo;   // Enhanced hash algorithm
 } secure_merkle_proof_t;
+
+// Note: secure_merkle_proof_t uses a unified CBOR serialization structure:
+// - Without expected_depth validation: serializes as version 1 (legacy proof)
+// - With expected_depth validation: serializes as version 2 (secure proof)
+// - CBOR key 8 (expected_depth) is optional in the unified structure
+// - This maintains backward compatibility with legacy proofs
 
 // Result structure for operations that may fail
 typedef struct {
@@ -147,6 +153,9 @@ merkle_result_t secure_merkle_tree_build_proof(const secure_merkle_tree_t* tree,
                                               const uint32_t* leaf_indices, size_t indices_count);
 
 // Secure Merkle Proof operations
+// Note: Uses unified CBOR structure with optional expected_depth field
+// Version 1 (legacy): without expected_depth
+// Version 2 (secure): with optional expected_depth for depth validation
 secure_merkle_proof_t* secure_merkle_proof_new(const uint32_t* indices, size_t indices_count,
                                               const hash_t* lemmas, size_t lemmas_count,
                                               uint8_t expected_depth, const secure_hash_algo_t* algo);

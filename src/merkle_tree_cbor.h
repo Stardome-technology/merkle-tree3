@@ -18,7 +18,7 @@ merkle_proof_t* merkle_proof_from_cbor(cbor_item_t* item);
 cbor_item_t* secure_merkle_tree_to_cbor(const secure_merkle_tree_t* tree);
 secure_merkle_tree_t* secure_merkle_tree_from_cbor(cbor_item_t* item);
 
-// CBOR serialization functions for Secure Merkle Proof
+// CBOR serialization functions for Secure Merkle Proof (unified structure with optional expected_depth)
 cbor_item_t* secure_merkle_proof_to_cbor(const secure_merkle_proof_t* proof);
 secure_merkle_proof_t* secure_merkle_proof_from_cbor(cbor_item_t* item);
 
@@ -48,9 +48,9 @@ hash_t* cbor_to_hash_array(cbor_item_t* item, size_t* count);
 
 // CBOR schema information
 #define CBOR_MERKLE_TREE_VERSION 1
-#define CBOR_MERKLE_PROOF_VERSION 1
+#define CBOR_MERKLE_PROOF_VERSION_LEGACY 1    // Legacy proof without security
+#define CBOR_MERKLE_PROOF_VERSION_SECURE 2    // Secure proof with optional expected_depth
 #define CBOR_SECURE_MERKLE_TREE_VERSION 2
-#define CBOR_SECURE_MERKLE_PROOF_VERSION 2
 
 // CBOR map keys (using integers for efficiency)
 // Note: Merkle tree and merkle proof use the same key numbers (1-5)
