@@ -76,7 +76,7 @@ hash_t* cbor_to_hash_array(cbor_item_t* item, size_t* count) {
     return hashes;
 }
 
-// Serialize merkle tree to CBOR
+// Serialize merkle tree to CBOR (unified structure with optional security fields)
 cbor_item_t* merkle_tree_to_cbor(const merkle_tree_t* tree) {
     if (!tree) return NULL;
     
@@ -213,6 +213,108 @@ merkle_tree_t* merkle_tree_from_cbor(cbor_item_t* item) {
     }
     
     return tree;
+}
+
+// Serialize secure merkle tree to CBOR (unified structure with optional tree_depth and security_flags)
+cbor_item_t* secure_merkle_tree_to_cbor(const secure_merkle_tree_t* tree) {
+    if (!tree) return NULL;
+    
+    // Map size is 5 (base) + 2 (optional) = 7 max, but we'll handle it dynamically
+    cbor_item_t* map = cbor_new_definite_map(7);
+    if (!map) return NULL;
+    
+    // Version (2 for secure tree with optional fields)
+    cbor_item_t* version_key = cbor_build_uint8(CBOR_KEY_VERSION);
+    cbor_item_t* version_val = cbor_build_uint8(CBOR_MERKLE_TREE_VERSION_SECURE);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = version_key, .value = version_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Nodes count
+    cbor_item_t* nodes_count_key = cbor_build_uint8(CBOR_KEY_NODES_COUNT);
+    cbor_item_t* nodes_count_val = cbor_build_uint32(tree->nodes_count);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = nodes_count_key, .value = nodes_count_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Nodes array
+    cbor_item_t* nodes_key = cbor_build_uint8(CBOR_KEY_NODES);
+    cbor_item_t* nodes_val = hash_array_to_cbor(tree->nodes, tree->nodes_count);
+    if (!nodes_val || !cbor_map_add(map, (struct cbor_pair) {
+        .key = nodes_key, .value = nodes_val
+    })) {
+        cbor_decref(&map);
+        if (nodes_val) cbor_decref(&nodes_val);
+        return NULL;
+    }
+    
+    // Algorithm name
+    cbor_item_t* algo_key = cbor_build_uint8(CBOR_KEY_ALGORITHM);
+    const char* algo_name = tree->algo ? tree->algo->algo_name : "unknown";
+    cbor_item_t* algo_val = cbor_build_string(algo_name);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = algo_key, .value = algo_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Hash size
+    cbor_item_t* hash_size_key = cbor_build_uint8(CBOR_KEY_HASH_SIZE);
+    uint32_t hash_size = tree->algo ? tree->algo->hash_size : HASH_SIZE;
+    cbor_item_t* hash_size_val = cbor_build_uint32(hash_size);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = hash_size_key, .value = hash_size_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Tree depth (optional, included for secure trees)
+    cbor_item_t* tree_depth_key = cbor_build_uint8(CBOR_KEY_TREE_DEPTH);
+    cbor_item_t* tree_depth_val = cbor_build_uint8(tree->tree_depth);
+    if (!cbor_map_add(map, (struct cbor_pair) {
+        .key = tree_depth_key, .value = tree_depth_val
+    })) {
+        cbor_decref(&map);
+        return NULL;
+    }
+    
+    // Security flags (optional, included if security is enabled)
+    // For now, we serialize a simplified flags structure
+    if (tree->security_enabled && tree->algo) {
+        cbor_item_t* flags_key = cbor_build_uint8(CBOR_KEY_SECURITY_FLAGS);
+        cbor_item_t* flags_map = cbor_new_definite_map(3);
+        if (!flags_map) {
+            cbor_decref(&map);
+            return NULL;
+        }
+        
+        // Flag 1: use_double_leaf_hash
+        cbor_item_t* flag1_key = cbor_build_uint8(1);
+        cbor_item_t* flag1_val = cbor_build_bool(tree->algo->use_double_leaf_hash);
+        cbor_map_add(flags_map, (struct cbor_pair) {.key = flag1_key, .value = flag1_val});
+        
+        // Flag 2: use_depth_prefix
+        cbor_item_t* flag2_key = cbor_build_uint8(2);
+        cbor_item_t* flag2_val = cbor_build_bool(tree->algo->use_depth_prefix);
+        cbor_map_add(flags_map, (struct cbor_pair) {.key = flag2_key, .value = flag2_val});
+        
+        // Flag 3: use_node_prefix
+        cbor_item_t* flag3_key = cbor_build_uint8(3);
+        cbor_item_t* flag3_val = cbor_build_bool(tree->algo->use_node_prefix);
+        cbor_map_add(flags_map, (struct cbor_pair) {.key = flag3_key, .value = flag3_val});
+        
+        cbor_map_add(map, (struct cbor_pair) {.key = flags_key, .value = flags_map});
+    }
+    
+    return map;
 }
 
 // Serialize merkle proof to CBOR
@@ -361,6 +463,106 @@ merkle_proof_t* merkle_proof_from_cbor(cbor_item_t* item) {
     }
     
     return proof;
+}
+
+// Deserialize secure merkle tree from CBOR (unified structure with optional tree_depth and security_flags)
+secure_merkle_tree_t* secure_merkle_tree_from_cbor(cbor_item_t* item) {
+    if (!cbor_isa_map(item)) {
+        return NULL;
+    }
+    
+    secure_merkle_tree_t* tree = malloc(sizeof(secure_merkle_tree_t));
+    if (!tree) return NULL;
+    
+    memset(tree, 0, sizeof(secure_merkle_tree_t));
+    
+    // Extract nodes count
+    cbor_item_t* nodes_count_key = cbor_build_uint8(CBOR_KEY_NODES_COUNT);
+    cbor_item_t* nodes_count_val = cbor_map_get(item, nodes_count_key);
+    cbor_decref(&nodes_count_key);
+    
+    if (!nodes_count_val || !cbor_isa_uint(nodes_count_val)) {
+        free(tree);
+        if (nodes_count_val) cbor_decref(&nodes_count_val);
+        return NULL;
+    }
+    
+    tree->nodes_count = cbor_get_uint32(nodes_count_val);
+    cbor_decref(&nodes_count_val);
+    
+    // Extract nodes array
+    cbor_item_t* nodes_key = cbor_build_uint8(CBOR_KEY_NODES);
+    cbor_item_t* nodes_val = cbor_map_get(item, nodes_key);
+    cbor_decref(&nodes_key);
+    
+    if (!nodes_val) {
+        free(tree);
+        return NULL;
+    }
+    
+    size_t nodes_array_count;
+    tree->nodes = cbor_to_hash_array(nodes_val, &nodes_array_count);
+    cbor_decref(&nodes_val);
+    
+    if (!tree->nodes || nodes_array_count != tree->nodes_count) {
+        free(tree->nodes);
+        free(tree);
+        return NULL;
+    }
+    
+    // Extract algorithm name (optional)
+    cbor_item_t* algo_key = cbor_build_uint8(CBOR_KEY_ALGORITHM);
+    cbor_item_t* algo_val = cbor_map_get(item, algo_key);
+    cbor_decref(&algo_key);
+    
+    if (algo_val && cbor_isa_string(algo_val)) {
+        size_t algo_len = cbor_string_length(algo_val);
+        char* algo_name = malloc(algo_len + 1);
+        if (algo_name) {
+            memcpy(algo_name, cbor_string_handle(algo_val), algo_len);
+            algo_name[algo_len] = '\0';
+            
+            // Match against known secure algorithms
+            if (strcmp(algo_name, "sha256-secure-max") == 0) {
+                tree->algo = (secure_hash_algo_t*)&secure_sha256_max;
+            } else if (strcmp(algo_name, "sha256-secure-moderate") == 0) {
+                tree->algo = (secure_hash_algo_t*)&secure_sha256_moderate;
+            }
+            free(algo_name);
+        }
+        cbor_decref(&algo_val);
+    }
+    
+    if (!tree->algo) {
+        tree->algo = (secure_hash_algo_t*)&secure_sha256_moderate;  // Default
+    }
+    
+    // Extract tree depth (optional)
+    cbor_item_t* tree_depth_key = cbor_build_uint8(CBOR_KEY_TREE_DEPTH);
+    cbor_item_t* tree_depth_val = cbor_map_get(item, tree_depth_key);
+    cbor_decref(&tree_depth_key);
+    
+    if (tree_depth_val && cbor_isa_uint(tree_depth_val)) {
+        tree->tree_depth = cbor_get_uint8(tree_depth_val);
+        cbor_decref(&tree_depth_val);
+    } else {
+        if (tree_depth_val) cbor_decref(&tree_depth_val);
+    }
+    
+    // Extract security flags (optional)
+    cbor_item_t* flags_key = cbor_build_uint8(CBOR_KEY_SECURITY_FLAGS);
+    cbor_item_t* flags_val = cbor_map_get(item, flags_key);
+    cbor_decref(&flags_key);
+    
+    if (flags_val && cbor_isa_map(flags_val)) {
+        tree->security_enabled = true;
+        cbor_decref(&flags_val);
+    } else {
+        tree->security_enabled = false;
+        if (flags_val) cbor_decref(&flags_val);
+    }
+    
+    return tree;
 }
 
 // Convenience function: serialize tree to buffer

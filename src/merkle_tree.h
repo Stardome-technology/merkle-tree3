@@ -49,10 +49,13 @@ struct merkle_tree {
 };
 
 // Enhanced Merkle Tree structure with security
+// Note: Uses unified CBOR serialization structure with version field
+// Version 1: Standard tree (tree_depth and security_flags omitted)
+// Version 2: Secure tree (tree_depth and security_flags included as optional fields)
 typedef struct {
     hash_t* nodes;              // Array of hash nodes
     size_t nodes_count;         // Number of nodes
-    uint8_t tree_depth;         // Tree depth for validation
+    uint8_t tree_depth;         // Tree depth for validation (optional in CBOR)
     secure_hash_algo_t* algo;   // Enhanced hash algorithm
     bool security_enabled;      // Security features enabled
 } secure_merkle_tree_t;
@@ -67,20 +70,22 @@ struct merkle_proof {
 };
 
 // Enhanced Merkle Proof structure with security
+// Note: Uses unified CBOR serialization structure with version field and optional expected_depth
+// Version 1: Legacy proof (expected_depth field omitted in CBOR)
+// Version 2: Secure proof (expected_depth field included for depth validation)
 typedef struct {
     uint32_t* indices;          // Array of indices
     size_t indices_count;       // Number of indices
     hash_t* lemmas;             // Array of hash lemmas
     size_t lemmas_count;        // Number of lemmas
-    uint8_t expected_depth;     // Expected tree depth for validation (0 = not used)
+    uint8_t expected_depth;     // Expected tree depth for validation (0 = not used, optional in CBOR)
     secure_hash_algo_t* algo;   // Enhanced hash algorithm
 } secure_merkle_proof_t;
 
-// Note: secure_merkle_proof_t uses a unified CBOR serialization structure:
-// - Without expected_depth validation: serializes as version 1 (legacy proof)
-// - With expected_depth validation: serializes as version 2 (secure proof)
-// - CBOR key 8 (expected_depth) is optional in the unified structure
-// - This maintains backward compatibility with legacy proofs
+// CBOR Serialization Notes:
+// The merkle_tree_to_cbor, secure_merkle_tree_to_cbor, merkle_proof_to_cbor,
+// and secure_merkle_proof_to_cbor functions use the unified CBOR structures
+// defined in stardome-merkle-tree.cddl with optional security fields.
 
 // Result structure for operations that may fail
 typedef struct {

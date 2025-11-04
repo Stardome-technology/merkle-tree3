@@ -45,8 +45,15 @@ This directory contains a complete C implementation of the Rust merkle-tree3 lib
 - **Configurable security levels** - Maximum, moderate, and legacy modes
 
 ✅ **CBOR Serialization** 📦
+- **Unified Tree Structure** - Single schema for standard and secure trees with optional fields
+  - Version 1: Standard tree (no security fields)
+  - Version 2: Secure tree (with optional tree_depth and security_flags)
+- **Unified Proof Structure** - Single schema for legacy and secure proofs with optional fields
+  - Version 1: Legacy proof (without expected_depth)
+  - Version 2: Secure proof (with optional expected_depth for validation)
 - **Raw byte encoding** - Efficient binary hash storage (not hex strings)
-- **Compact integer keys** - Sequential keys 1-5 for optimal encoding
+- **Compact integer keys** - Sequential keys 1-8 for optimal encoding
+- **Optional Security Fields** - Keys 6-8 marked optional in CDDL for forward/backward compatibility
 - **Serial communication ready** - Optimized for MCU/embedded systems
 - **Bidirectional conversion** - Serialize to/from CBOR with validation
 - **Buffer management** - Direct byte array operations for embedded use
@@ -78,25 +85,40 @@ This directory contains a complete C implementation of the Rust merkle-tree3 lib
 - **Moderate Security**: Recommended for production (depth + node prefix)
 - **Legacy Mode**: Compatible with older implementations (no security features)
 
-## CBOR Schema Structure
+## CBOR Schema Structure (Unified Format)
 
-### Merkle Tree (Keys 1-5)
+### Unified Merkle Tree (Keys 1-7, optional security fields)
 ```
-1: version, 2: nodes[], 3: nodes_count, 4: algorithm, 5: hash_size
+Mandatory fields (Keys 1-5):
+  1: version          (1 = standard, 2 = secure)
+  2: nodes[]          (array of raw 32-byte hashes)
+  3: nodes_count      (uint)
+  4: algorithm        (string, e.g., "sha256" or "sha256-secure-moderate")
+  5: hash_size        (uint, typically 32)
+
+Optional security fields (Keys 6-7):
+  ? 6: tree_depth     (uint ≤ 32, only in version 2)
+  ? 7: security_flags (map with use_double_leaf_hash, use_depth_prefix, use_node_prefix)
 ```
 
-### Merkle Proof (Keys 1-5, unified structure)
+### Unified Merkle Proof (Keys 1-8, optional validation fields)
 ```
-Version 1 (Legacy - no security):
-1: version, 2: indices[], 3: lemmas[], 4: indices_count, 5: lemmas_count
+Mandatory fields (Keys 1-5):
+  1: version           (1 = legacy, 2 = secure)
+  2: indices[]         (array of proof indices)
+  3: lemmas[]          (array of raw 32-byte hash lemmas)
+  4: indices_count     (uint)
+  5: lemmas_count      (uint)
 
-Version 2 (Secure - with optional depth validation):
-1: version, 2: indices[], 3: lemmas[], 4: indices_count, 5: lemmas_count, ? 8: expected_depth
+Optional validation field (Key 8):
+  ? 8: expected_depth  (uint ≤ 32, only in version 2 for depth validation)
 ```
 
-### Secure Merkle Tree (Keys 1-7)
-```
-1: version, 2: nodes[], 3: nodes_count, 4: algorithm, 5: hash_size, 6: tree_depth, 7: security_flags
+### Design Benefits
+- **Backward Compatibility**: Version 1 structures work with existing parsers
+- **Forward Compatibility**: New fields are optional, older parsers skip them
+- **Space Efficient**: Optional fields only included when needed
+- **Single Schema**: One definition covers all variants (standard, secure, legacy, enhanced)
 ```
 
 ## Build Options

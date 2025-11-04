@@ -2,24 +2,17 @@
 ; Hashes are stored as RAW BYTES (not hex-encoded)
 ; Both structures use keys 1-5 but are separate CBOR objects
 
-; Merkle Tree CBOR structure
+; Unified Merkle Tree CBOR structure
+; Version 1: Standard tree without optional security features
+; Version 2: Tree with optional security enhancements (tree_depth, security_flags)
 merkle-tree-cbor = {
-  1: uint,                      ; version (CBOR_KEY_VERSION)
+  1: uint,                      ; version (CBOR_KEY_VERSION) - 1 for standard, 2+ for secure
   2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
   3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
   4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
   5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
-}
-
-; Secure Merkle Tree CBOR structure (version 2+)
-secure-merkle-tree-cbor = {
-  1: 2,                         ; version (CBOR_KEY_VERSION) - version 2 for security
-  2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
-  3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
-  4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
-  5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
-  6: uint .le 32,               ; tree_depth (CBOR_KEY_TREE_DEPTH)
-  7: security-flags             ; security_flags (CBOR_KEY_SECURITY_FLAGS)
+  ? 6: uint .le 32,             ; tree_depth (CBOR_KEY_TREE_DEPTH) - optional for security
+  ? 7: security-flags           ; security_flags (CBOR_KEY_SECURITY_FLAGS) - optional for security
 }
 
 ; Unified Merkle Proof CBOR structure (supports both legacy and secure proofs)
@@ -35,7 +28,7 @@ merkle-proof-cbor = {
 }
 
 ; Hash algorithms supported
-hash-algorithm = "sha256" / "blake2b" / "keccak256" / tstr
+hash-algorithm = "sha256" / "blake2b" 
 
 ; Extended tree with optional fields
 merkle-tree-extended = {
@@ -79,7 +72,7 @@ encoding-type = &(
 
 ; Example CBOR Diagnostic Notation:
 ;
-; Merkle Tree:
+; Standard Merkle Tree (version 1, no security features):
 ; {
 ;   1: 1,                       / version /
 ;   2: [                        / nodes (raw bytes) /
@@ -91,32 +84,7 @@ encoding-type = &(
 ;   5: 32                       / hash_size /
 ; }
 ;
-; Merkle Proof (Legacy - version 1):
-; {
-;   1: 1,                       / version (legacy) /
-;   2: [0, 3],                  / indices /
-;   3: [                        / lemmas (raw bytes) /
-;     h'abcdef1234567890...',
-;     h'fedcba0987654321...'
-;   ],
-;   4: 2,                       / indices_count /
-;   5: 2                        / lemmas_count /
-; }
-;
-; Merkle Proof (Secure - version 2 with optional expected_depth):
-; {
-;   1: 2,                       / version (secure) /
-;   2: [0],                     / indices /
-;   3: [                        / lemmas (raw bytes with security) /
-;     h'abcdef1234567890...',
-;     h'fedcba0987654321...'
-;   ],
-;   4: 1,                       / indices_count /
-;   5: 2,                       / lemmas_count /
-;   8: 4                        / expected_depth (optional) /
-; }
-;
-; Secure Merkle Tree:
+; Secure Merkle Tree (version 2+, with optional security features):
 ; {
 ;   1: 2,                       / version (security enabled) /
 ;   2: [                        / nodes (raw bytes with security prefixes) /
@@ -124,10 +92,10 @@ encoding-type = &(
 ;     h'1234567890abcdef...'
 ;   ],
 ;   3: 15,                      / nodes_count /
-;   4: "sha256-secure-moderate", / hashalgo /
+;   4: "sha256-secure",         / hashalgo /
 ;   5: 32,                      / hash_size /
-;   6: 4,                       / tree_depth /
-;   7: {                        / security_flags /
+;   6: 4,                       / tree_depth (optional) /
+;   7: {                        / security_flags (optional) /
 ;     1: false,                 / use_double_leaf_hash /
 ;     2: true,                  / use_depth_prefix /
 ;     3: true                   / use_node_prefix /
