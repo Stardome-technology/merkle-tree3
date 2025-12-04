@@ -12,7 +12,7 @@ merkle-tree-cbor = {
   4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
   5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
   ? 6: uint .le 32,             ; tree_depth (CBOR_KEY_TREE_DEPTH) - optional for security
-  ? 7: security-flags           ; security_flags (CBOR_KEY_SECURITY_FLAGS) - optional for security
+  ? 7: security_flags           ; security_flags (CBOR_KEY_SECURITY_FLAGS) - optional for security
 }
 
 ; Unified Merkle Proof CBOR structure (supports both legacy and secure proofs)
@@ -44,7 +44,7 @@ merkle-tree-extended = {
 }
 
 ; Security configuration flags
-security-flags = {
+security_flags = {
   1: bool,                      ; use_double_leaf_hash
   2: bool,                      ; use_depth_prefix  
   3: bool                       ; use_node_prefix
