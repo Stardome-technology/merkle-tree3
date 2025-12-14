@@ -85,7 +85,7 @@ typedef struct {
 // CBOR Serialization Notes:
 // The merkle_tree_to_cbor, secure_merkle_tree_to_cbor, merkle_proof_to_cbor,
 // and secure_merkle_proof_to_cbor functions use the unified CBOR structures
-// defined in stardome-merkle-tree.cddl with optional security fields.
+// defined in merkle-tree.cddl with optional security fields.
 
 // Result structure for operations that may fail
 typedef struct {

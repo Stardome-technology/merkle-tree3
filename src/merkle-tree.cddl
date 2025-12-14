@@ -1,4 +1,4 @@
-; CDDL schema for Stardome Merkle Tree CBOR serialization
+; CDDL schema for Merkle Tree CBOR serialization
 ; Hashes are stored as RAW BYTES (not hex-encoded)
 ; Both structures use keys 1-5 but are separate CBOR objects
 

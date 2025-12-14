@@ -13,7 +13,7 @@ This directory contains a complete C implementation of the Rust merkle-tree3 lib
 ### CBOR Serialization
 - **`merkle_tree_cbor.h`** - CBOR serialization API declarations
 - **`merkle_tree_cbor.c`** - CBOR serialization implementation using libcbor
-- **`stardome-merkle-tree.cddl`** - CBOR schema documentation in CDDL format
+- **`merkle-tree.cddl`** - CBOR schema documentation in CDDL format
 
 ### Build System Files
 - **`Makefile`** - GNU Make build configuration for Linux/macOS/MinGW with CBOR support

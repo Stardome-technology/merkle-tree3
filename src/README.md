@@ -29,7 +29,7 @@ This implementation is restricted to working with hash values only:
 - `test_merkle_tree.c` - Example usage and test cases with hash values
 - `merkle_tree_cbor.h` - CBOR serialization header (optional)
 - `merkle_tree_cbor.c` - CBOR serialization implementation (optional)
-- `stardome-merkle-tree.cddl` - CBOR schema documentation (CDDL format)
+- `merkle-tree.cddl` - CBOR schema documentation (CDDL format)
 - `CBOR_INSTALL.md` - Instructions for installing libcbor dependency
 - `Makefile` - Build configuration with optional CBOR support
 - `CMakeLists.txt` - CMake build configuration with CBOR auto-detection
@@ -302,7 +302,7 @@ merkle_tree_t* tree = merkle_tree_from_cbor_buffer(data, data_size);
 #endif
 ```
 
-**CBOR Schema**: See `stardome-merkle-tree.cddl` for complete CBOR schema documentation.
+**CBOR Schema**: See `merkle-tree.cddl` for complete CBOR schema documentation.
 
 ## API Reference
 
