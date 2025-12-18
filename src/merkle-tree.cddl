@@ -2,18 +2,29 @@
 ; Hashes are stored as RAW BYTES (not hex-encoded)
 ; Both structures use keys 1-5 but are separate CBOR objects
 
-; Unified Merkle Tree CBOR structure
-; Version 1: Standard tree without optional security features
-; Version 2: Tree with optional security enhancements (tree_depth, security_flags)
-merkle-tree-cbor = {
-  1: uint,                      ; version (CBOR_KEY_VERSION) - 1 for standard, 2+ for secure
+; Versioned Merkle Tree CBOR structures
+; - `merkle-tree-v1` is the legacy standard tree (version = 1)
+; - `merkle-tree-v2` is the secure tree where `tree_depth` (key 6) is mandatory
+merkle-tree-v1 = {
+  1: 1,                         ; version == 1 (legacy)
+  2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
+  3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
+  4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
+  5: uint .ge 1                 ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
+}
+
+merkle-tree-v2 = {
+  1: uint .ge 2,                ; version >= 2 indicates secure tree
   2: [* bstr .size 32],         ; nodes - array of raw 32-byte hashes (CBOR_KEY_NODES)
   3: uint .ge 15,               ; nodes_count (CBOR_KEY_NODES_COUNT)
   4: tstr,                      ; hashalgo - algorithm name (CBOR_KEY_ALGORITHM)
   5: uint .ge 1,                ; hash_size - typically 32 (CBOR_KEY_HASH_SIZE)
-  ? 6: uint .le 32,             ; tree_depth (CBOR_KEY_TREE_DEPTH) - optional for security
+  6: uint .le 32,               ; tree_depth (CBOR_KEY_TREE_DEPTH) - MANDATORY for v2
   ? 7: security_flags           ; security_flags (CBOR_KEY_SECURITY_FLAGS) - optional for security
 }
+
+; Unified entry: either v1 or v2
+merkle-tree-cbor = merkle-tree-v1 / merkle-tree-v2
 
 ; Unified Merkle Proof CBOR structure (supports both legacy and secure proofs)
 ; Version 1: Legacy proof without security features

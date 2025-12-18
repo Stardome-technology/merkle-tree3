@@ -215,15 +215,15 @@ merkle_tree_t* merkle_tree_from_cbor(cbor_item_t* item) {
     return tree;
 }
 
-// Serialize secure merkle tree to CBOR (unified structure with optional tree_depth and security_flags)
+// Serialize secure merkle tree to CBOR (unified structure; `tree_depth` is mandatory)
 cbor_item_t* secure_merkle_tree_to_cbor(const secure_merkle_tree_t* tree) {
     if (!tree) return NULL;
     
-    // Map size is 5 (base) + 2 (optional) = 7 max, but we'll handle it dynamically
+    // Map size is 7 for secure trees (includes mandatory tree_depth and optional security_flags)
     cbor_item_t* map = cbor_new_definite_map(7);
     if (!map) return NULL;
     
-    // Version (2 for secure tree with optional fields)
+    // Version (2 for secure tree; tree_depth mandatory, security_flags optional)
     cbor_item_t* version_key = cbor_build_uint8(CBOR_KEY_VERSION);
     cbor_item_t* version_val = cbor_build_uint8(CBOR_MERKLE_TREE_VERSION_SECURE);
     if (!cbor_map_add(map, (struct cbor_pair) {
@@ -276,7 +276,7 @@ cbor_item_t* secure_merkle_tree_to_cbor(const secure_merkle_tree_t* tree) {
         return NULL;
     }
     
-    // Tree depth (optional, included for secure trees)
+    // Tree depth (mandatory for secure trees)
     cbor_item_t* tree_depth_key = cbor_build_uint8(CBOR_KEY_TREE_DEPTH);
     cbor_item_t* tree_depth_val = cbor_build_uint8(tree->tree_depth);
     if (!cbor_map_add(map, (struct cbor_pair) {
@@ -537,17 +537,21 @@ secure_merkle_tree_t* secure_merkle_tree_from_cbor(cbor_item_t* item) {
         tree->algo = (secure_hash_algo_t*)&secure_sha256_moderate;  // Default
     }
     
-    // Extract tree depth (optional)
+    // Extract tree depth (now mandatory for secure trees)
     cbor_item_t* tree_depth_key = cbor_build_uint8(CBOR_KEY_TREE_DEPTH);
     cbor_item_t* tree_depth_val = cbor_map_get(item, tree_depth_key);
     cbor_decref(&tree_depth_key);
-    
-    if (tree_depth_val && cbor_isa_uint(tree_depth_val)) {
-        tree->tree_depth = cbor_get_uint8(tree_depth_val);
-        cbor_decref(&tree_depth_val);
-    } else {
+
+    if (!tree_depth_val || !cbor_isa_uint(tree_depth_val)) {
+        // tree_depth is required for secure merkle trees
+        free(tree->nodes);
+        free(tree);
         if (tree_depth_val) cbor_decref(&tree_depth_val);
+        return NULL;
     }
+
+    tree->tree_depth = cbor_get_uint8(tree_depth_val);
+    cbor_decref(&tree_depth_val);
     
     // Extract security flags (optional)
     cbor_item_t* flags_key = cbor_build_uint8(CBOR_KEY_SECURITY_FLAGS);

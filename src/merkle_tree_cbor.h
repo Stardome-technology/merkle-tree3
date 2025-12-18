@@ -6,9 +6,9 @@
 #include "merkle_tree.h"
 #include <cbor.h>
 
-// CBOR serialization functions for Merkle Tree (unified structure with optional security fields)
+// CBOR serialization functions for Merkle Tree (unified structure with security fields)
 // Version 1: Standard tree (tree_depth and security_flags omitted)
-// Version 2: Secure tree (tree_depth and security_flags included)
+// Version 2: Secure tree (tree_depth is mandatory; security_flags optional)
 cbor_item_t* merkle_tree_to_cbor(const merkle_tree_t* tree);
 merkle_tree_t* merkle_tree_from_cbor(cbor_item_t* item);
 
@@ -52,7 +52,7 @@ hash_t* cbor_to_hash_array(cbor_item_t* item, size_t* count);
 
 // CBOR schema information
 #define CBOR_MERKLE_TREE_VERSION 1                 // Standard tree version
-#define CBOR_MERKLE_TREE_VERSION_SECURE 2          // Secure tree version (with optional tree_depth, security_flags)
+#define CBOR_MERKLE_TREE_VERSION_SECURE 2          // Secure tree version (tree_depth mandatory, security_flags optional)
 #define CBOR_MERKLE_PROOF_VERSION_LEGACY 1         // Legacy proof version (without expected_depth)
 #define CBOR_MERKLE_PROOF_VERSION_SECURE 2         // Secure proof version (with optional expected_depth)
 
@@ -70,8 +70,8 @@ enum cbor_merkle_keys {
     CBOR_KEY_HASH_SIZE = 5,                // Merkle tree: hash size
     CBOR_KEY_LEMMAS_COUNT = 5,             // Merkle proof: lemmas count (reused)
     
-    // Optional keys for secure versions
-    CBOR_KEY_TREE_DEPTH = 6,               // Optional: Tree depth for security validation
+    // Keys for secure versions (tree_depth is mandatory)
+    CBOR_KEY_TREE_DEPTH = 6,               // Mandatory: Tree depth for security validation
     CBOR_KEY_SECURITY_FLAGS = 7,           // Optional: Security configuration flags
     CBOR_KEY_EXPECTED_DEPTH = 8            // Optional: Expected depth for secure proofs
 };
