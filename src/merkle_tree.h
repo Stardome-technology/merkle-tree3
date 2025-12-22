@@ -62,7 +62,10 @@ typedef struct {
 
 // Merkle Proof structure
 struct merkle_proof {
-    uint32_t* indices;      // Array of indices
+    // Indices are CBMT *node indices* into the implicit array-based tree layout
+    // (root at 0, leaves start at leaves_count-1).
+    // NOTE: These are NOT leaf-layer indices.
+    uint32_t* indices;      // Array of CBMT node indices
     size_t indices_count;   // Number of indices
     hash_t* lemmas;         // Array of hash lemmas
     size_t lemmas_count;    // Number of lemmas
@@ -72,13 +75,17 @@ struct merkle_proof {
 // Enhanced Merkle Proof structure with security
 // Note: Uses unified CBOR serialization structure with version field and optional expected_depth
 // Version 1: Legacy proof (expected_depth field omitted in CBOR)
-// Version 2: Secure proof (expected_depth field included for depth validation)
+// Version 2+: Secure proof (expected_depth field included for depth validation)
 typedef struct {
-    uint32_t* indices;          // Array of indices
+    // Indices are *leaf-layer indices* (0..2^tree_depth-1) for secure single-leaf proofs.
+    // NOTE: This differs from legacy proofs which use CBMT node indices.
+    uint32_t* indices;          // Array of leaf-layer indices
     size_t indices_count;       // Number of indices
     hash_t* lemmas;             // Array of hash lemmas
     size_t lemmas_count;        // Number of lemmas
-    uint8_t expected_depth;     // Expected tree depth for validation (0 = not used, optional in CBOR)
+    // For secure proofs this must match the tree depth; the verifier expects
+    // lemmas_count == expected_depth.
+    uint8_t expected_depth;     // Expected tree depth for validation
     secure_hash_algo_t* algo;   // Enhanced hash algorithm
 } secure_merkle_proof_t;
 
@@ -164,7 +171,7 @@ merkle_result_t secure_merkle_tree_build_proof(const secure_merkle_tree_t* tree,
 // Secure Merkle Proof operations
 // Note: Uses unified CBOR structure with optional expected_depth field
 // Version 1 (legacy): without expected_depth
-// Version 2 (secure): with optional expected_depth for depth validation
+// Version 2+ (secure): expected_depth is required for strict verification
 secure_merkle_proof_t* secure_merkle_proof_new(const uint32_t* indices, size_t indices_count,
                                               const hash_t* lemmas, size_t lemmas_count,
                                               uint8_t expected_depth, const secure_hash_algo_t* algo);

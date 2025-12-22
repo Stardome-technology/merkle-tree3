@@ -57,18 +57,6 @@ merkle-proof-cbor = merkle-proof-v1 / merkle-proof-v2
 ; Hash algorithms supported
 hash-algorithm = "sha256" / "blake2b" 
 
-; Extended tree with optional fields
-merkle-tree-extended = {
-  1: uint .default 1,           ; version
-  2: [* bstr .size 32],         ; nodes (raw bytes)
-  3: uint .ge 15,               ; nodes_count
-  4: hash-algorithm,            ; hashalgo
-  5: uint .ge 1,                ; hash_size
-  ? 6: uint .ge 8,              ; leaves_count (optional)
-  ? 7: uint,                    ; tree_depth (optional)
-  ? 8: bstr .size 32,           ; root_hash (optional, raw bytes)
-  ? 9: metadata-map             ; metadata (optional)
-}
 
 ; Security configuration flags
 security_flags = {
