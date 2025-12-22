@@ -8,7 +8,7 @@ REM Try GCC first
 where gcc >nul 2>&1
 if %ERRORLEVEL% == 0 (
     echo Using GCC...
-    gcc -Wall -Wextra -std=c99 -pedantic -O2 -g -o test_merkle_tree merkle_tree.c test_merkle_tree.c
+    gcc -Wall -Wextra -std=c99 -pedantic -O2 -g -o test_merkle_tree merkle_tree.c merkle_tree_secure.c test_merkle_tree.c
     if %ERRORLEVEL% == 0 (
         echo Build successful!
         echo Running tests...
@@ -23,7 +23,7 @@ REM Try Microsoft Visual C++ compiler
 where cl >nul 2>&1
 if %ERRORLEVEL% == 0 (
     echo Using Microsoft Visual C++...
-    cl /W4 /O2 /Fe:test_merkle_tree.exe merkle_tree.c test_merkle_tree.c
+    cl /W4 /O2 /Fe:test_merkle_tree.exe merkle_tree.c merkle_tree_secure.c test_merkle_tree.c
     if %ERRORLEVEL% == 0 (
         echo Build successful!
         echo Running tests...
@@ -38,7 +38,7 @@ REM Try Clang
 where clang >nul 2>&1
 if %ERRORLEVEL% == 0 (
     echo Using Clang...
-    clang -Wall -Wextra -std=c99 -pedantic -O2 -g -o test_merkle_tree merkle_tree.c test_merkle_tree.c
+    clang -Wall -Wextra -std=c99 -pedantic -O2 -g -o test_merkle_tree merkle_tree.c merkle_tree_secure.c test_merkle_tree.c
     if %ERRORLEVEL% == 0 (
         echo Build successful!
         echo Running tests...

@@ -391,49 +391,100 @@ static int compare_pairs_by_index_reverse(const void* a, const void* b) {
     return 0;
 }
 
+static void pair_queue_pop_front(index_hash_pair_t* queue, size_t* count, index_hash_pair_t* out) {
+    if (!queue || !count || *count == 0 || !out) return;
+
+    *out = queue[0];
+    if (*count > 1) {
+        memmove(queue, queue + 1, (*count - 1) * sizeof(index_hash_pair_t));
+    }
+    (*count)--;
+}
+
+static void pair_queue_insert_sorted_desc(index_hash_pair_t* queue, size_t* count, const index_hash_pair_t* item) {
+    if (!queue || !count || !item) return;
+
+    size_t pos = 0;
+    while (pos < *count && queue[pos].index > item->index) {
+        pos++;
+    }
+
+    if (pos < *count) {
+        memmove(queue + pos + 1, queue + pos, (*count - pos) * sizeof(index_hash_pair_t));
+    }
+    queue[pos] = *item;
+    (*count)++;
+}
+
 bool merkle_proof_root(const merkle_proof_t* proof, const hash_t* leaves, size_t leaves_count, hash_t result) {
-    if (!proof || !leaves || !result || leaves_count != proof->indices_count || leaves_count == 0) {
+    if (!proof || !proof->hash_algo || !leaves || !result || leaves_count != proof->indices_count || leaves_count == 0) {
         return false;
     }
-    
-    // Create sorted leaves array
-    hash_t* sorted_leaves = malloc(leaves_count * sizeof(hash_t));
-    if (!sorted_leaves) return false;
-    
-    memcpy(sorted_leaves, leaves, leaves_count * sizeof(hash_t));
-    qsort(sorted_leaves, leaves_count, sizeof(hash_t), (int(*)(const void*, const void*))hash_compare);
-    
-    // Create index-hash pairs and sort by index (reverse order)
-    index_hash_pair_t* pairs = malloc(leaves_count * sizeof(index_hash_pair_t));
-    if (!pairs) {
-        free(sorted_leaves);
-        return false;
-    }
-    
+
+    // Leaves must be provided in the same order as proof->indices.
+    // (I.e., leaves[i] corresponds to proof->indices[i].)
+    // This makes verification deterministic; if callers have leaves in leaf-index order,
+    // they can reorder them using merkle_proof_indices().
+
+    // Working queue: at most leaves_count elements.
+    index_hash_pair_t* queue = malloc(leaves_count * sizeof(index_hash_pair_t));
+    if (!queue) return false;
+
     for (size_t i = 0; i < leaves_count; i++) {
-        pairs[i].index = proof->indices[i];
-        hash_copy(sorted_leaves[i], pairs[i].hash);
+        queue[i].index = proof->indices[i];
+        hash_copy(leaves[i], queue[i].hash);
     }
-    
-    // Sort pairs by index in reverse order
-    qsort(pairs, leaves_count, sizeof(index_hash_pair_t), compare_pairs_by_index_reverse);
-    
-    // Simple implementation: just return the first hash for demonstration
-    // A complete implementation would require a more complex queue-based algorithm
-    if (leaves_count == 1) {
-        hash_copy(pairs[0].hash, result);
-        free(pairs);
-        free(sorted_leaves);
-        return true;
+
+    size_t queue_count = leaves_count;
+    qsort(queue, queue_count, sizeof(index_hash_pair_t), compare_pairs_by_index_reverse);
+
+    size_t lemma_pos = 0;
+    while (queue_count > 0) {
+        index_hash_pair_t current;
+        pair_queue_pop_front(queue, &queue_count, &current);
+
+        if (current.index == 0) {
+            bool ok = (queue_count == 0) && (lemma_pos == proof->lemmas_count);
+            if (ok) {
+                hash_copy(current.hash, result);
+            }
+            free(queue);
+            return ok;
+        }
+
+        uint32_t sibling_index = tree_index_sibling(current.index);
+        hash_t sibling_hash;
+
+        if (queue_count > 0 && queue[0].index == sibling_index) {
+            index_hash_pair_t sibling;
+            pair_queue_pop_front(queue, &queue_count, &sibling);
+            hash_copy(sibling.hash, sibling_hash);
+        } else {
+            if (lemma_pos >= proof->lemmas_count) {
+                free(queue);
+                return false;
+            }
+            hash_copy(proof->lemmas[lemma_pos], sibling_hash);
+            lemma_pos++;
+        }
+
+        hash_t parent_hash;
+        if (tree_index_is_left(current.index)) {
+            proof->hash_algo->hash_func(current.hash, sibling_hash, parent_hash);
+        } else {
+            proof->hash_algo->hash_func(sibling_hash, current.hash, parent_hash);
+        }
+
+        index_hash_pair_t parent;
+        parent.index = tree_index_parent(current.index);
+        hash_copy(parent_hash, parent.hash);
+
+        // Insert parent back into queue, keeping it sorted by index (descending).
+        pair_queue_insert_sorted_desc(queue, &queue_count, &parent);
     }
-    
-    // For multiple leaves, implement the full proof verification algorithm
-    // This is a simplified version
-    hash_copy(pairs[0].hash, result);
-    
-    free(pairs);
-    free(sorted_leaves);
-    return true;
+
+    free(queue);
+    return false;
 }
 
 bool merkle_proof_verify(const merkle_proof_t* proof, const hash_t root, const hash_t* leaves, size_t leaves_count) {
@@ -446,6 +497,17 @@ bool merkle_proof_verify(const merkle_proof_t* proof, const hash_t root, const h
     }
     
     return success;
+}
+
+bool merkle_proof_verify_single(const merkle_proof_t* proof, const hash_t root, const hash_t leaf) {
+    if (!proof || !leaf) return false;
+    if (proof->indices_count != 1) return false;
+
+    hash_t computed_root;
+    bool success = merkle_proof_root(proof, &leaf, 1, computed_root);
+    if (!success) return false;
+
+    return (hash_compare(computed_root, root) == 0);
 }
 
 const uint32_t* merkle_proof_indices(const merkle_proof_t* proof) {

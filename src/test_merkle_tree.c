@@ -78,8 +78,14 @@ void test_merkle_tree() {
     
     // Verify proof
     hash_t proof_leaves[2];
-    hash_copy(leaves[0], proof_leaves[0]); // leaves[0] = 2
-    hash_copy(leaves[3], proof_leaves[1]); // leaves[3] = 7
+    // Leaves must be supplied in the same order as proof->indices.
+    // proof->indices contain node indices into the tree's nodes array; convert to leaf positions.
+    const uint32_t* proof_indices = merkle_proof_indices(proof);
+    for (size_t i = 0; i < 2; i++) {
+        uint32_t node_index = proof_indices[i];
+        uint32_t leaf_pos = node_index + 1 - (uint32_t)leaves_count;
+        hash_copy(leaves[leaf_pos], proof_leaves[i]);
+    }
     
     bool verified = merkle_proof_verify(proof, root, proof_leaves, 2);
     printf("Proof verification: %s\n", verified ? "PASSED" : "FAILED");
@@ -143,7 +149,12 @@ void test_single_leaf() {
     printf("Single leaf lemmas count: %zu\n", merkle_proof_lemmas_count(proof));
     
     // Verify proof
-    bool verified = merkle_proof_verify(proof, root, leaves, 1);
+    // Leaves must be supplied in the same order as proof->indices.
+    hash_t proof_leaf;
+    uint32_t node_index = merkle_proof_indices(proof)[0];
+    uint32_t leaf_pos = node_index + 1 - 1; // leaves_count == 1
+    hash_copy(leaves[leaf_pos], proof_leaf);
+    bool verified = merkle_proof_verify(proof, root, &proof_leaf, 1);
     printf("Single leaf verification: %s\n", verified ? "PASSED" : "FAILED");
     assert(verified);
     

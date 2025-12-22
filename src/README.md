@@ -98,10 +98,10 @@ cmake --install .
 ### Manual compilation
 ```bash
 # GCC/Clang
-gcc -Wall -Wextra -std=c99 -O2 -o test_merkle_tree merkle_tree.c test_merkle_tree.c
+gcc -Wall -Wextra -std=c99 -O2 -o test_merkle_tree merkle_tree.c merkle_tree_secure.c test_merkle_tree.c
 
 # Microsoft Visual C++
-cl /W4 /O2 /Fe:test_merkle_tree.exe merkle_tree.c test_merkle_tree.c
+cl /W4 /O2 /Fe:test_merkle_tree.exe merkle_tree.c merkle_tree_secure.c test_merkle_tree.c
 
 # Run tests
 ./test_merkle_tree        # Linux/macOS
@@ -151,7 +151,16 @@ int main() {
         merkle_proof_t* proof = proof_result.proof;
         
         // Verify proof
-        hash_t proof_leaves[] = {leaves[0], leaves[3]};
+        // IMPORTANT: leaves must be supplied in the same order as proof->indices.
+        // (leaves[i] corresponds to merkle_proof_indices(proof)[i])
+        hash_t proof_leaves[2];
+        const uint32_t* proof_indices = merkle_proof_indices(proof);
+        for (size_t i = 0; i < 2; i++) {
+            uint32_t node_index = proof_indices[i];
+            uint32_t leaf_pos = node_index + 1 - 5; // leaves_count == 5
+            hash_copy(leaves[leaf_pos], proof_leaves[i]);
+        }
+
         bool verified = merkle_proof_verify(proof, root, proof_leaves, 2);
         printf("Proof verified: %s\n", verified ? "true" : "false");
         
@@ -191,9 +200,10 @@ int main() {
             secure_merkle_proof_t* proof = proof_result.secure_proof;
             
             // Verify with depth validation
+            // Note: the secure proof builder/verifier currently supports single-leaf proofs only.
             hash_t root;
             // ... get root from tree ...
-            bool verified = secure_merkle_proof_verify(proof, root, &leaves[0], 1);
+            bool verified = secure_merkle_proof_verify_single(proof, root, leaves[0]);
             
             secure_merkle_proof_free(proof);
         }
@@ -204,6 +214,21 @@ int main() {
     return 0;
 }
 ```
+
+## Proof Verification Notes
+
+### Non-secure proofs (multi-leaf supported)
+
+- `merkle_proof_verify(proof, root, leaves, leaves_count)` verifies *one or more* leaves.
+- The verifier needs the leaf value(s) and uses `proof->indices` to decide left/right at each level.
+- **Critical requirement:** `leaves[i]` must correspond to `merkle_proof_indices(proof)[i]` (same order).
+- If you are verifying a single leaf, prefer `merkle_proof_verify_single(proof, root, leaf)`.
+
+### Secure proofs (single-leaf only)
+
+- `secure_merkle_tree_build_proof` currently builds proofs for exactly one leaf.
+- `secure_merkle_proof_verify` is strict and returns `false` unless `leaves_count == 1`.
+- Prefer `secure_merkle_proof_verify_single(proof, root, leaf)` to avoid any ambiguity.
 
 ### Security Configurations
 

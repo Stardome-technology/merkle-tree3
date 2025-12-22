@@ -118,6 +118,10 @@ merkle_proof_t* merkle_proof_new(const uint32_t* indices, size_t indices_count,
 void merkle_proof_free(merkle_proof_t* proof);
 bool merkle_proof_root(const merkle_proof_t* proof, const hash_t* leaves, size_t leaves_count, hash_t result);
 bool merkle_proof_verify(const merkle_proof_t* proof, const hash_t root, const hash_t* leaves, size_t leaves_count);
+// Single-leaf verification helper.
+// Expects a proof generated for exactly one leaf (proof->indices_count == 1).
+// The leaf value provided here corresponds to proof->indices[0].
+bool merkle_proof_verify_single(const merkle_proof_t* proof, const hash_t root, const hash_t leaf);
 const uint32_t* merkle_proof_indices(const merkle_proof_t* proof);
 size_t merkle_proof_indices_count(const merkle_proof_t* proof);
 const hash_t* merkle_proof_lemmas(const merkle_proof_t* proof);
@@ -167,6 +171,11 @@ secure_merkle_proof_t* secure_merkle_proof_new(const uint32_t* indices, size_t i
 void secure_merkle_proof_free(secure_merkle_proof_t* proof);
 bool secure_merkle_proof_verify(const secure_merkle_proof_t* proof, const hash_t root, 
                                const hash_t* leaves, size_t leaves_count);
+// Single-leaf verification helper.
+// Expects a proof generated for exactly one leaf (proof->indices_count == 1).
+// The leaf value provided here corresponds to proof->indices[0].
+bool secure_merkle_proof_verify_single(const secure_merkle_proof_t* proof, const hash_t root,
+                                      const hash_t leaf);
 
 // Built-in secure hash algorithms
 extern const secure_hash_algo_t secure_sha256_max;      // Maximum security

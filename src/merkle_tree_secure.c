@@ -252,17 +252,34 @@ bool secure_merkle_proof_verify(const secure_merkle_proof_t* proof, const hash_t
     if (!proof || !leaves || leaves_count == 0 || proof->indices_count != leaves_count) {
         return false;
     }
+
+    // This implementation currently supports proofs for a single leaf only.
+    if (leaves_count != 1 || proof->indices_count != 1) {
+        return false;
+    }
+
+    return secure_merkle_proof_verify_single(proof, root, leaves[0]);
+}
+
+bool secure_merkle_proof_verify_single(const secure_merkle_proof_t* proof, const hash_t root,
+                                      const hash_t leaf) {
+    if (!proof || !leaf) {
+        return false;
+    }
+
+    if (proof->indices_count != 1) {
+        return false;
+    }
     
     // Validate expected depth against lemmas count
     if (proof->lemmas_count != proof->expected_depth) {
         return false;
     }
-    
-    hash_t computed_root;
+
     hash_t current_hash;
     
     // Start with secure leaf hash
-    secure_leaf_hash(leaves[0], HASH_SIZE, proof->expected_depth, proof->algo, current_hash);
+    secure_leaf_hash(leaf, HASH_SIZE, proof->expected_depth, proof->algo, current_hash);
     
     // Walk up the tree using lemmas with depth validation
     uint8_t current_depth = proof->expected_depth;
