@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "../xmss_integration/xmss_submodule/sha256.h"
+#include "../xmss/core/sha256.h"
 
 // SHA256 implementation using xmss/sha256.c
 void sha256_hash(const uint8_t* left, const uint8_t* right, uint8_t* result) {
