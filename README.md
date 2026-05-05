@@ -70,6 +70,12 @@ The codebase exposes two proof models:
 
 This distinction is part of the versioned CBOR schema and is documented in `merkle_tree.h`.
 
+## Optional SHA-256 Adapter
+
+The core library is hash-agnostic and does not depend on any specific SHA-256 implementation.
+
+If you want the convenience symbols `sha256_algo`, `secure_sha256_max`, and `secure_sha256_moderate`, compile `merkle_tree_sha256.c` and provide a project-local implementation of `merkle_tree_sha256_digest()` declared in `merkle_tree_sha256_backend.h`.
+
 ## CBOR Serialization and CDDL Compliance
 
 The normative schema for serialized trees and proofs is defined in `stardome-merkle-tree.cddl`.

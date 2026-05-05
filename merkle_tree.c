@@ -2,23 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "../xmss/core/sha256.h"
-
-// SHA256 implementation using xmss/sha256.c
-void sha256_hash(const uint8_t* left, const uint8_t* right, uint8_t* result) {
-    // Range semantics: hash data from left to right (exclusive)
-    // This supports both contiguous buffers (like in secure_merkle_tree)
-    // and requires callers to pass (start, end) pointers.
-    size_t len = (size_t)(right - left);
-    xmss_sha256_wrapper(left, (unsigned long long)len, result);
-}
-
-// Built-in SHA256 algorithm
-const hash_algo_t sha256_algo = {
-    .hash_func = sha256_hash,
-    .algo_name = "sha256",
-    .hash_size = HASH_SIZE
-};
 
 // Hash utility functions
 void hash_copy(const hash_t src, hash_t dst) {

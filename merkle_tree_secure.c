@@ -2,25 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Built-in secure hash algorithm configurations
-const secure_hash_algo_t secure_sha256_max = {
-    .hash_func = sha256_hash,
-    .algo_name = "sha256-secure-max",
-    .hash_size = HASH_SIZE,
-    .use_double_leaf_hash = true,   // Double hash leaves
-    .use_depth_prefix = true,       // Add depth to each hash
-    .use_node_prefix = true         // Distinguish leaf/internal nodes
-};
-
-const secure_hash_algo_t secure_sha256_moderate = {
-    .hash_func = sha256_hash,
-    .algo_name = "sha256-secure-moderate",
-    .hash_size = HASH_SIZE,
-    .use_double_leaf_hash = false,  // Single hash is usually sufficient
-    .use_depth_prefix = true,       // Depth prefixing is crucial
-    .use_node_prefix = true         // Always distinguish node types
-};
-
 // Security-enhanced leaf hashing
 void secure_leaf_hash(const uint8_t* data, size_t data_len, uint8_t depth, 
                      const secure_hash_algo_t* algo, uint8_t* result) {
