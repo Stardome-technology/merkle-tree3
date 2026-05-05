@@ -150,7 +150,9 @@ void hash_zero(hash_t hash);
 void hash_to_hex(const hash_t hash, char* hex_str);
 bool hash_from_hex(const char* hex_str, hash_t hash);
 
-// Built-in hash algorithms
+// Optional SHA-256 adapter algorithms.
+// These symbols are defined by merkle_tree_sha256.c and require a backend
+// implementation of merkle_tree_sha256_digest().
 extern const hash_algo_t sha256_algo;
 void sha256_hash(const uint8_t* left, const uint8_t* right, uint8_t* result);
 
@@ -184,7 +186,7 @@ bool secure_merkle_proof_verify(const secure_merkle_proof_t* proof, const hash_t
 bool secure_merkle_proof_verify_single(const secure_merkle_proof_t* proof, const hash_t root,
                                       const hash_t leaf);
 
-// Built-in secure hash algorithms
+// Optional SHA-256-backed secure algorithm presets.
 extern const secure_hash_algo_t secure_sha256_max;      // Maximum security
 extern const secure_hash_algo_t secure_sha256_moderate; // Moderate security
 
