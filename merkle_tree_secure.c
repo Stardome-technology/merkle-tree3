@@ -2,6 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+static merkle_progress_hook_t g_merkle_progress_hook = NULL;
+static void *g_merkle_progress_ctx = NULL;
+
+void secure_merkle_tree_set_progress_hook(merkle_progress_hook_t hook, void *ctx)
+{
+    g_merkle_progress_hook = hook;
+    g_merkle_progress_ctx = ctx;
+}
+
+static void secure_merkle_tree_progress_poll(void)
+{
+    if (g_merkle_progress_hook != NULL) {
+        g_merkle_progress_hook(g_merkle_progress_ctx);
+    }
+}
+
 // Security-enhanced leaf hashing
 void secure_leaf_hash(const uint8_t* data, size_t data_len, uint8_t depth, 
                      const secure_hash_algo_t* algo, uint8_t* result) {
@@ -340,6 +356,8 @@ merkle_result_t secure_merkle_tree_build_proof(const secure_merkle_tree_t* tree,
     size_t current_level_count = leaf_count;
     
     for (uint8_t depth = 0; depth < tree->tree_depth; depth++) {
+        secure_merkle_tree_progress_poll();
+
         uint32_t sibling_index = current_index % 2 == 0 ? current_index + 1 : current_index - 1;
         
         if (sibling_index < current_level_count) {

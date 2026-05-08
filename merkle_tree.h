@@ -17,6 +17,11 @@
 // Hash type definition
 typedef uint8_t hash_t[HASH_SIZE];
 
+// Optional progress hook for long-running secure tree/proof operations.
+// Libraries embedding Merkle operations can register a lightweight poll/yield
+// callback to keep surrounding runtimes responsive during deep loops.
+typedef void (*merkle_progress_hook_t)(void *ctx);
+
 // Forward declarations
 typedef struct merkle_tree merkle_tree_t;
 typedef struct merkle_proof merkle_proof_t;
@@ -149,6 +154,10 @@ int hash_compare(const hash_t a, const hash_t b);
 void hash_zero(hash_t hash);
 void hash_to_hex(const hash_t hash, char* hex_str);
 bool hash_from_hex(const char* hex_str, hash_t hash);
+
+// Optional progress-hook registration.
+// Default behavior is no-op when no hook is installed.
+void secure_merkle_tree_set_progress_hook(merkle_progress_hook_t hook, void *ctx);
 
 // Optional SHA-256 adapter algorithms.
 // These symbols are defined by merkle_tree_sha256.c and require a backend
