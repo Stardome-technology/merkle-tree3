@@ -174,3 +174,15 @@ These are upper-bound planning estimates, not a substitute for validating actual
 - This repository is a C adaptation, not the original Rust library.
 - The README summarizes the schema but does not replace `stardome-merkle-tree.cddl`.
 - The current C implementation exposes only the CBOR operations implemented in the shipped source files; do not assume full schema coverage unless the corresponding API exists.
+
+# License
+
+This repository contains code derived from the Nervos Network merkle-tree implementation, which is licensed under the MIT License.
+
+Modifications and additions in this fork are Copyright 2026 Stardome SAGL.
+
+Unless otherwise noted, code derived from the upstream implementation remains subject to the MIT License in the repository LICENSE file.
+
+Original Stardome-authored additions may also be made available under the Apache License, Version 2.0. Where that applies, it should be stated explicitly in the relevant files or accompanying license notice.
+
+Stardome and related names may be trademarks of their respective owners. No trademark rights are granted by this repository license.
