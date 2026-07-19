@@ -374,7 +374,7 @@ merkle_result_t secure_merkle_tree_build_proof(const secure_merkle_tree_t* tree,
         current_level_count = (current_level_count + 1) / 2;
     }
     
-    secure_merkle_proof_t* proof = secure_merkle_proof_new(indices, 1, lemmas, tree->tree_depth,
+    secure_merkle_proof_t* proof = secure_merkle_proof_new(indices, 1, (const hash_t*)lemmas, tree->tree_depth,
                                                           tree->tree_depth, tree->algo);
     
     free(lemmas);

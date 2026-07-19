@@ -291,7 +291,7 @@ merkle_result_t merkle_tree_build_proof(const merkle_tree_t* tree, const uint32_
     
     // Create proof
     merkle_proof_t* proof = merkle_proof_new(indices, indices_count, 
-                                             lemmas->data, lemmas->count, tree->hash_algo);
+                                             (const hash_t*)lemmas->data, lemmas->count, tree->hash_algo);
     
     free(indices);
     uint32_queue_free(queue);
@@ -313,7 +313,7 @@ void merkle_tree_root(const merkle_tree_t* tree, hash_t result) {
 }
 
 const hash_t* merkle_tree_nodes(const merkle_tree_t* tree) {
-    return tree ? tree->nodes : NULL;
+    return tree ? (const hash_t*)tree->nodes : NULL;
 }
 
 size_t merkle_tree_nodes_count(const merkle_tree_t* tree) {
@@ -487,7 +487,9 @@ bool merkle_proof_verify_single(const merkle_proof_t* proof, const hash_t root, 
     if (proof->indices_count != 1) return false;
 
     hash_t computed_root;
-    bool success = merkle_proof_root(proof, &leaf, 1, computed_root);
+    hash_t leaf_copy;
+    hash_copy(leaf, leaf_copy);
+    bool success = merkle_proof_root(proof, (const hash_t*)&leaf_copy, 1, computed_root);
     if (!success) return false;
 
     return (hash_compare(computed_root, root) == 0);
@@ -502,7 +504,7 @@ size_t merkle_proof_indices_count(const merkle_proof_t* proof) {
 }
 
 const hash_t* merkle_proof_lemmas(const merkle_proof_t* proof) {
-    return proof ? proof->lemmas : NULL;
+    return proof ? (const hash_t*)proof->lemmas : NULL;
 }
 
 size_t merkle_proof_lemmas_count(const merkle_proof_t* proof) {
