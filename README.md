@@ -175,6 +175,12 @@ These are upper-bound planning estimates, not a substitute for validating actual
 - The README summarizes the schema but does not replace `stardome-merkle-tree.cddl`.
 - The current C implementation exposes only the CBOR operations implemented in the shipped source files; do not assume full schema coverage unless the corresponding API exists.
 
+## Git workflow
+This repository is a fork consumed as a submodule: development integrates into the
+`stardome-stripped*` branch, never into the inherited upstream `main`/`master`.
+The authoritative rules for contributors and agents are in the `## Git workflow`
+section of [AGENTS.md](AGENTS.md).
+
 # License
 
 This repository contains code derived from the Nervos Network merkle-tree implementation, which is licensed under the MIT License.
